@@ -1,0 +1,213 @@
+// ============================================
+// Settings Page Component
+// ============================================
+
+import React, { useState, useEffect } from 'react';
+import { getSettings, updateSettings, resetSettings, AppSettings, exportAllData, importData } from '../services';
+import { Button } from '../components/Button';
+import { FormatSelector } from '../components/common/FormatSelector';
+import { DataFormat } from '../core';
+import { Settings, Download, Upload, RotateCcw, Check, Save } from 'lucide-react';
+
+export const SettingsPage: React.FC = () => {
+  const [settings, setSettings] = useState<AppSettings>(getSettings());
+  const [saved, setSaved] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    setSettings(getSettings());
+  }, []);
+  
+  const handleChange = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
+    const updated = { ...settings, [key]: value };
+    setSettings(updated);
+  };
+  
+  const handleSave = () => {
+    updateSettings(settings);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+  
+  const handleReset = () => {
+    if (confirm('Reset all settings to default values?')) {
+      const defaults = resetSettings();
+      setSettings(defaults);
+    }
+  };
+  
+  const handleExport = () => {
+    const data = exportAllData();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `datatoolkit-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (importData(content)) {
+        setSettings(getSettings());
+        setImportError(null);
+        alert('Data imported successfully!');
+      } else {
+        setImportError('Failed to import data. Invalid format.');
+      }
+    };
+    reader.readAsText(file);
+  };
+  
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="flex items-center gap-3 mb-8">
+        <Settings size={28} className="text-primary" />
+        <h1 className="text-2xl font-bold text-slate-100">Settings</h1>
+      </div>
+      
+      {/* Editor Settings */}
+      <section className="bg-surface border border-slate-700 rounded-lg p-6 mb-6">
+        <h2 className="text-lg font-semibold text-slate-200 mb-4">Editor</h2>
+        
+        <div className="space-y-4">
+          {/* Default Format */}
+          <div className="flex justify-between items-center">
+            <div>
+              <label className="text-sm font-medium text-slate-300">Default Format</label>
+              <p className="text-xs text-slate-500">Format used when content type is unclear</p>
+            </div>
+            <FormatSelector 
+              value={settings.defaultFormat} 
+              onChange={(f) => handleChange('defaultFormat', f)}
+              size="sm"
+            />
+          </div>
+          
+          {/* Indent Size */}
+          <div className="flex justify-between items-center">
+            <div>
+              <label className="text-sm font-medium text-slate-300">Indent Size</label>
+              <p className="text-xs text-slate-500">Number of spaces for indentation</p>
+            </div>
+            <select
+              value={settings.indentSize}
+              onChange={(e) => handleChange('indentSize', Number(e.target.value))}
+              className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200"
+            >
+              <option value={2}>2 spaces</option>
+              <option value={4}>4 spaces</option>
+            </select>
+          </div>
+          
+          {/* Font Size */}
+          <div className="flex justify-between items-center">
+            <div>
+              <label className="text-sm font-medium text-slate-300">Font Size</label>
+              <p className="text-xs text-slate-500">Editor font size in pixels</p>
+            </div>
+            <select
+              value={settings.fontSize}
+              onChange={(e) => handleChange('fontSize', Number(e.target.value))}
+              className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200"
+            >
+              <option value={12}>12px</option>
+              <option value={14}>14px</option>
+              <option value={16}>16px</option>
+              <option value={18}>18px</option>
+            </select>
+          </div>
+          
+          {/* Line Numbers */}
+          <div className="flex justify-between items-center">
+            <div>
+              <label className="text-sm font-medium text-slate-300">Show Line Numbers</label>
+              <p className="text-xs text-slate-500">Display line numbers in editor</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.showLineNumbers}
+                onChange={(e) => handleChange('showLineNumbers', e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-700 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+          
+          {/* Auto Detect */}
+          <div className="flex justify-between items-center">
+            <div>
+              <label className="text-sm font-medium text-slate-300">Auto Detect Format</label>
+              <p className="text-xs text-slate-500">Automatically detect input format</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.autoDetectFormat}
+                onChange={(e) => handleChange('autoDetectFormat', e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-700 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+        </div>
+      </section>
+      
+      {/* Data Management */}
+      <section className="bg-surface border border-slate-700 rounded-lg p-6 mb-6">
+        <h2 className="text-lg font-semibold text-slate-200 mb-4">Data Management</h2>
+        
+        <div className="space-y-4">
+          {/* Export */}
+          <div className="flex justify-between items-center">
+            <div>
+              <label className="text-sm font-medium text-slate-300">Export Data</label>
+              <p className="text-xs text-slate-500">Download all templates and settings</p>
+            </div>
+            <Button variant="secondary" size="sm" onClick={handleExport} icon={<Download size={14} />}>
+              Export
+            </Button>
+          </div>
+          
+          {/* Import */}
+          <div className="flex justify-between items-center">
+            <div>
+              <label className="text-sm font-medium text-slate-300">Import Data</label>
+              <p className="text-xs text-slate-500">Restore from a backup file</p>
+              {importError && <p className="text-xs text-red-400 mt-1">{importError}</p>}
+            </div>
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImport}
+                className="hidden"
+              />
+              <Button variant="secondary" size="sm" icon={<Upload size={14} />} as="span">
+                Import
+              </Button>
+            </label>
+          </div>
+        </div>
+      </section>
+      
+      {/* Actions */}
+      <div className="flex justify-between">
+        <Button variant="danger" onClick={handleReset} icon={<RotateCcw size={14} />}>
+          Reset to Defaults
+        </Button>
+        
+        <Button onClick={handleSave} icon={saved ? <Check size={14} /> : <Save size={14} />}>
+          {saved ? 'Saved!' : 'Save Settings'}
+        </Button>
+      </div>
+    </div>
+  );
+};

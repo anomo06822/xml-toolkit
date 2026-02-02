@@ -1,27 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
-import { XmlConverter } from './features/XmlConverter';
-import { Visualizer } from './features/Visualizer';
-import { Sorter } from './features/Sorter';
-import { Differ } from './features/Differ';
-import { XmlMinifier } from './features/XmlMinifier';
+import { AppTab } from './core';
+import { 
+  UnifiedFormatter, 
+  UnifiedSorter, 
+  UnifiedDiffer, 
+  UnifiedConverter, 
+  UnifiedVisualizer 
+} from './features/unified';
 import { GeminiAssistant } from './features/GeminiAssistant';
-import { AppTab } from './types';
+import { SettingsPage } from './features/Settings';
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<AppTab>(AppTab.CONVERTER);
+  const [activeTab, setActiveTab] = useState<AppTab>(AppTab.FORMATTER);
 
-  // Feature 5: Hotkey System (Simple Implementation)
+  // Hotkey System
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Navigation Hotkeys: Alt + 1-6
       if (e.altKey) {
-        if (e.key === '1') setActiveTab(AppTab.CONVERTER);
-        if (e.key === '2') setActiveTab(AppTab.TREE);
-        if (e.key === '3') setActiveTab(AppTab.SORTER);
-        if (e.key === '4') setActiveTab(AppTab.DIFF);
-        if (e.key === '5') setActiveTab(AppTab.MINIFIER);
-        if (e.key === '6') setActiveTab(AppTab.AI);
+        const tabMap: Record<string, AppTab> = {
+          '1': AppTab.FORMATTER,
+          '2': AppTab.SORTER,
+          '3': AppTab.DIFF,
+          '4': AppTab.CONVERTER,
+          '5': AppTab.VISUALIZER,
+          '6': AppTab.AI,
+        };
+        
+        if (tabMap[e.key]) {
+          e.preventDefault();
+          setActiveTab(tabMap[e.key]);
+        }
       }
     };
 
@@ -31,14 +40,36 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case AppTab.CONVERTER: return <XmlConverter />;
-      case AppTab.TREE: return <Visualizer />;
-      case AppTab.SORTER: return <Sorter />;
-      case AppTab.DIFF: return <Differ />;
-      case AppTab.MINIFIER: return <XmlMinifier />;
-      case AppTab.AI: return <GeminiAssistant />;
-      default: return <XmlConverter />;
+      case AppTab.FORMATTER:
+        return <UnifiedFormatter />;
+      case AppTab.SORTER:
+        return <UnifiedSorter />;
+      case AppTab.DIFF:
+        return <UnifiedDiffer />;
+      case AppTab.CONVERTER:
+        return <UnifiedConverter />;
+      case AppTab.VISUALIZER:
+        return <UnifiedVisualizer />;
+      case AppTab.AI:
+        return <GeminiAssistant />;
+      case AppTab.SETTINGS:
+        return <SettingsPage />;
+      default:
+        return <UnifiedFormatter />;
     }
+  };
+
+  const getTabTitle = () => {
+    const titles: Record<AppTab, string> = {
+      [AppTab.FORMATTER]: 'Format & Beautify',
+      [AppTab.SORTER]: 'Sort',
+      [AppTab.DIFF]: 'Compare / Diff',
+      [AppTab.CONVERTER]: 'Convert',
+      [AppTab.VISUALIZER]: 'Visualize',
+      [AppTab.AI]: 'AI Assistant',
+      [AppTab.SETTINGS]: 'Settings',
+    };
+    return titles[activeTab];
   };
 
   return (
@@ -46,11 +77,18 @@ const App: React.FC = () => {
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 border-b border-slate-800 flex items-center px-8 bg-background/50 backdrop-blur-sm z-10">
+        <header className="h-16 border-b border-slate-800 flex items-center justify-between px-8 bg-background/50 backdrop-blur-sm z-10">
           <div className="flex items-center gap-2 text-sm text-slate-500">
-             <span>Application</span>
-             <span>/</span>
-             <span className="text-slate-200 font-medium capitalize">{activeTab.replace('-', ' ')}</span>
+            <span>DataToolkit</span>
+            <span>/</span>
+            <span className="text-slate-200 font-medium">{getTabTitle()}</span>
+          </div>
+          
+          {/* Format badges */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-medium">XML</span>
+            <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded font-medium">JSON</span>
+            <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded font-medium">Markdown</span>
           </div>
         </header>
 

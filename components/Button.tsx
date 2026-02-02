@@ -4,6 +4,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   icon?: React.ReactNode;
+  as?: 'button' | 'span';
 }
 
 export const Button: React.FC<ButtonProps> = ({ 
@@ -11,6 +12,7 @@ export const Button: React.FC<ButtonProps> = ({
   variant = 'primary', 
   size = 'md', 
   icon,
+  as = 'button',
   className = '',
   ...props 
 }) => {
@@ -29,9 +31,20 @@ export const Button: React.FC<ButtonProps> = ({
     lg: "px-6 py-3 text-base"
   };
 
+  const combinedClassName = `${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`;
+
+  if (as === 'span') {
+    return (
+      <span className={combinedClassName}>
+        {icon && <span className="mr-2">{icon}</span>}
+        {children}
+      </span>
+    );
+  }
+
   return (
     <button 
-      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+      className={combinedClassName}
       {...props}
     >
       {icon && <span className="mr-2">{icon}</span>}

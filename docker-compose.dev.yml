@@ -1,0 +1,29 @@
+# ==============================================
+# DataToolkit - Multi-Format Data Processing Tool
+# Docker Development Compose
+# ==============================================
+
+services:
+  # ==============================================
+  # Development Server with Hot Reload
+  # ==============================================
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: datatoolkit-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    command: npm run dev
+    networks:
+      - datatoolkit-dev-network
+
+networks:
+  datatoolkit-dev-network:
+    driver: bridge

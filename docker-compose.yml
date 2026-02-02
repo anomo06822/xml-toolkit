@@ -1,0 +1,87 @@
+# ==============================================
+# DataToolkit - Multi-Format Data Processing Tool
+# Docker Compose Production Deployment
+# ==============================================
+
+services:
+  # ==============================================
+  # Main Application
+  # ==============================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: datatoolkit-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:80"
+    environment:
+      - NODE_ENV=production
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - datatoolkit-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.datatoolkit.rule=Host(`${APP_DOMAIN:-localhost}`)"
+      - "traefik.http.services.datatoolkit.loadbalancer.server.port=80"
+
+  # ==============================================
+  # Nginx Reverse Proxy (Optional, for production)
+  # ==============================================
+  nginx:
+    image: nginx:alpine
+    container_name: datatoolkit-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-8080}:80"
+      - "${NGINX_SSL_PORT:-8443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    networks:
+      - datatoolkit-network
+    profiles:
+      - with-nginx
+
+  # ==============================================
+  # Traefik (Optional, for advanced routing)
+  # ==============================================
+  traefik:
+    image: traefik:v2.10
+    container_name: datatoolkit-traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8081:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - datatoolkit-network
+    profiles:
+      - with-traefik
+
+networks:
+  datatoolkit-network:
+    driver: bridge
+
+# ==============================================
+# Volume definitions (for persistent data if needed)
+# ==============================================
+volumes:
+  app-data:
+    driver: local
