@@ -155,8 +155,9 @@ export const jsonToXml = (jsonStr: string, rootName = 'root'): OperationResult<s
     }
     
     if (typeof value === 'object') {
+      const textValue = value['#text'];
       const children = Object.entries(value)
-        .filter(([key]) => !key.startsWith('@'))
+        .filter(([key]) => !key.startsWith('@') && key !== '#text')
         .map(([key, val]) => valueToXml(val, key, indent + '  '))
         .join('');
       
@@ -165,15 +166,23 @@ export const jsonToXml = (jsonStr: string, rootName = 'root'): OperationResult<s
       let attrStr = '';
       if (attrs && typeof attrs === 'object') {
         attrStr = Object.entries(attrs)
-          .map(([key, val]) => ` ${key}="${val}"`)
+          .map(([key, val]) => ` ${key}="${escapeXml(String(val))}"`)
           .join('');
       }
       
+      const textContent = textValue !== undefined && textValue !== null
+        ? escapeXml(String(textValue))
+        : '';
+      
       if (!children.trim()) {
+        if (textContent) {
+          return `${indent}<${tagName}${attrStr}>${textContent}</${tagName}>\n`;
+        }
         return `${indent}<${tagName}${attrStr}/>\n`;
       }
       
-      return `${indent}<${tagName}${attrStr}>\n${children}${indent}</${tagName}>\n`;
+      const textLine = textContent ? `${indent}  ${textContent}\n` : '';
+      return `${indent}<${tagName}${attrStr}>\n${textLine}${children}${indent}</${tagName}>\n`;
     }
     
     return `${indent}<${tagName}>${escapeXml(String(value))}</${tagName}>\n`;

@@ -1,33 +1,58 @@
 // ============================================
 // Unified Formatter - Format, Minify, Beautify
+// Auto-detects format from input
 // ============================================
 
 import React, { useState, useEffect } from 'react';
 import { DataFormat } from '../../core';
-import { format, minify, detectFormat, validate } from '../../core';
+import { format, minify, detectFormat } from '../../core';
 import { addToHistory } from '../../services';
-import { FormatSelector, CodeEditor, TemplateManager } from '../../components/common';
+import { CodeEditor, TemplateManager } from '../../components/common';
 import { Button } from '../../components/Button';
 import { 
   AlignLeft, Minimize2, Copy, Check, 
-  AlertCircle, CheckCircle, Wand2, Download
+  AlertCircle, CheckCircle, Wand2, Download,
+  FileCode, Braces, FileText
 } from 'lucide-react';
+
+// Format badge component
+const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ format, confidence }) => {
+  const icons: Record<DataFormat, React.ReactNode> = {
+    xml: <FileCode size={12} />,
+    json: <Braces size={12} />,
+    markdown: <FileText size={12} />
+  };
+  
+  const colors: Record<DataFormat, string> = {
+    xml: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    json: 'bg-green-500/20 text-green-400 border-green-500/30',
+    markdown: 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+  };
+  
+  return (
+    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${colors[format]}`}>
+      {icons[format]}
+      <span>{format.toUpperCase()}</span>
+      {confidence < 1 && (
+        <span className="opacity-60">({Math.round(confidence * 100)}%)</span>
+      )}
+    </div>
+  );
+};
 
 export const UnifiedFormatter: React.FC = () => {
   const [input, setInput] = useState<string>('{\n  "hello": "world",\n  "items": [1, 2, 3]\n}');
   const [output, setOutput] = useState<string>('');
-  const [inputFormat, setInputFormat] = useState<DataFormat>('json');
+  const [detectedFormat, setDetectedFormat] = useState<{ format: DataFormat; confidence: number }>({ format: 'json', confidence: 1 });
   const [indentSize, setIndentSize] = useState<number>(2);
   const [copied, setCopied] = useState(false);
   const [validation, setValidation] = useState<{ valid: boolean; error?: string } | null>(null);
   
-  // Auto-detect format
+  // Auto-detect format whenever input changes
   useEffect(() => {
     if (input.trim()) {
       const detected = detectFormat(input);
-      if (detected.confidence > 0.5) {
-        setInputFormat(detected.format);
-      }
+      setDetectedFormat({ format: detected.format, confidence: detected.confidence });
       setValidation({ valid: detected.isValid, error: detected.error });
     } else {
       setValidation(null);
@@ -35,27 +60,26 @@ export const UnifiedFormatter: React.FC = () => {
   }, [input]);
   
   const handleFormat = () => {
-    const result = format(input, inputFormat, { indentSize });
+    const result = format(input, detectedFormat.format, { indentSize });
     if (result.success && result.data) {
       setOutput(result.data);
-      addToHistory({ content: result.data, format: inputFormat, operation: 'format' });
+      addToHistory({ content: result.data, format: detectedFormat.format, operation: 'format' });
     } else {
       setOutput(`Error: ${result.error}`);
     }
   };
   
   const handleMinify = () => {
-    const result = minify(input, inputFormat);
+    const result = minify(input, detectedFormat.format);
     if (result.success && result.data) {
       setOutput(result.data);
-      addToHistory({ content: result.data, format: inputFormat, operation: 'minify' });
+      addToHistory({ content: result.data, format: detectedFormat.format, operation: 'minify' });
     } else {
       setOutput(`Error: ${result.error}`);
     }
   };
   
   const handleAutoFix = () => {
-    // Try to format (which often fixes minor issues)
     handleFormat();
   };
   
@@ -76,14 +100,13 @@ export const UnifiedFormatter: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `formatted.${extensions[inputFormat]}`;
+    a.download = `formatted.${extensions[detectedFormat.format]}`;
     a.click();
     URL.revokeObjectURL(url);
   };
   
   const handleLoadTemplate = (content: string, format: DataFormat) => {
     setInput(content);
-    setInputFormat(format);
   };
   
   return (
@@ -96,7 +119,10 @@ export const UnifiedFormatter: React.FC = () => {
             Format & Beautify
           </h2>
           
-          <FormatSelector value={inputFormat} onChange={setInputFormat} />
+          {/* Auto-detected format badge */}
+          {input.trim() && (
+            <FormatBadge format={detectedFormat.format} confidence={detectedFormat.confidence} />
+          )}
           
           {/* Indent Size */}
           <div className="flex items-center gap-2 bg-slate-900 px-3 py-1 rounded-lg border border-slate-700">
@@ -135,7 +161,7 @@ export const UnifiedFormatter: React.FC = () => {
           {validation.valid ? (
             <>
               <CheckCircle size={16} />
-              Valid {inputFormat.toUpperCase()}
+              Valid {detectedFormat.format.toUpperCase()}
             </>
           ) : (
             <>
@@ -163,7 +189,7 @@ export const UnifiedFormatter: React.FC = () => {
             <label className="text-sm font-medium text-slate-400">Input</label>
             <TemplateManager
               currentContent={input}
-              currentFormat={inputFormat}
+              currentFormat={detectedFormat.format}
               onLoad={handleLoadTemplate}
               compact
             />
@@ -172,9 +198,9 @@ export const UnifiedFormatter: React.FC = () => {
             <CodeEditor
               value={input}
               onChange={setInput}
-              format={inputFormat}
+              format={detectedFormat.format}
               showLineNumbers
-              placeholder="Paste your content here..."
+              placeholder="Paste your XML, JSON, or Markdown here..."
             />
           </div>
         </div>
@@ -204,7 +230,7 @@ export const UnifiedFormatter: React.FC = () => {
           <div className="flex-1 bg-[#162032] border border-slate-700 rounded-lg overflow-hidden">
             <CodeEditor
               value={output}
-              format={inputFormat}
+              format={detectedFormat.format}
               readOnly
               showLineNumbers
               placeholder="Formatted output will appear here..."

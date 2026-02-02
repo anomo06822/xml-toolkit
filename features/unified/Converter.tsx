@@ -7,7 +7,7 @@ import { DataFormat, convert, detectFormat, format } from '../../core';
 import { addToHistory } from '../../services';
 import { FormatSelector, CodeEditor, TemplateManager } from '../../components/common';
 import { Button } from '../../components/Button';
-import { ArrowRight, ArrowLeftRight, Copy, Check, Download, RefreshCw } from 'lucide-react';
+import { ArrowRight, ArrowLeft, ArrowLeftRight, Copy, Check, Download, RefreshCw } from 'lucide-react';
 
 export const UnifiedConverter: React.FC = () => {
   const [input, setInput] = useState<string>('<root>\n  <item id="1">Hello</item>\n  <item id="2">World</item>\n</root>');
@@ -31,7 +31,7 @@ export const UnifiedConverter: React.FC = () => {
     }
   }, []);
   
-  const handleConvert = () => {
+  const handleConvertForward = () => {
     setError(null);
     
     const result = convert(input, fromFormat, toFormat);
@@ -44,13 +44,31 @@ export const UnifiedConverter: React.FC = () => {
       setOutput('');
     }
   };
+
+  const handleConvertBackward = () => {
+    if (!output.trim()) {
+      setError('Right side is empty. Paste content to convert back.');
+      return;
+    }
+
+    setError(null);
+
+    const result = convert(output, toFormat, fromFormat);
+
+    if (result.success && result.data) {
+      setInput(result.data);
+      addToHistory({ content: result.data, format: fromFormat, operation: 'convert' });
+    } else {
+      setError(result.error || 'Reverse conversion failed');
+    }
+  };
   
   const handleSwap = () => {
     // Swap formats and content
     setFromFormat(toFormat);
     setToFormat(fromFormat);
     setInput(output);
-    setOutput('');
+    setOutput(input);
   };
   
   const handleFormatInput = () => {
@@ -113,9 +131,19 @@ export const UnifiedConverter: React.FC = () => {
           </div>
         </div>
         
-        <Button onClick={handleConvert} icon={<ArrowRight size={16} />}>
-          Convert
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleConvertForward} icon={<ArrowRight size={16} />}>
+            Convert →
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleConvertBackward}
+            icon={<ArrowLeft size={16} />}
+            disabled={!output.trim()}
+          >
+            ← Convert
+          </Button>
+        </div>
       </div>
       
       {/* Error Display */}
@@ -202,8 +230,8 @@ export const UnifiedConverter: React.FC = () => {
           <div className="flex-1 bg-[#162032] border border-slate-700 rounded-lg overflow-hidden">
             <CodeEditor
               value={output}
+              onChange={setOutput}
               format={toFormat}
-              readOnly
               showLineNumbers
               placeholder="Converted output will appear here..."
             />

@@ -6,7 +6,9 @@ import {
   UnifiedSorter, 
   UnifiedDiffer, 
   UnifiedConverter, 
-  UnifiedVisualizer 
+  UnifiedVisualizer,
+  UnifiedTable,
+  UnifiedMarkdownPreview
 } from './features/unified';
 import { GeminiAssistant } from './features/GeminiAssistant';
 import { SettingsPage } from './features/Settings';
@@ -24,7 +26,9 @@ const App: React.FC = () => {
           '3': AppTab.DIFF,
           '4': AppTab.CONVERTER,
           '5': AppTab.VISUALIZER,
-          '6': AppTab.AI,
+          '6': AppTab.MARKDOWN,
+          '7': AppTab.TABLE,
+          '8': AppTab.AI,
         };
         
         if (tabMap[e.key]) {
@@ -50,6 +54,10 @@ const App: React.FC = () => {
         return <UnifiedConverter />;
       case AppTab.VISUALIZER:
         return <UnifiedVisualizer />;
+      case AppTab.MARKDOWN:
+        return <UnifiedMarkdownPreview />;
+      case AppTab.TABLE:
+        return <UnifiedTable />;
       case AppTab.AI:
         return <GeminiAssistant />;
       case AppTab.SETTINGS:
@@ -66,6 +74,8 @@ const App: React.FC = () => {
       [AppTab.DIFF]: 'Compare / Diff',
       [AppTab.CONVERTER]: 'Convert',
       [AppTab.VISUALIZER]: 'Visualize',
+      [AppTab.MARKDOWN]: 'Markdown Preview',
+      [AppTab.TABLE]: 'Table Editor',
       [AppTab.AI]: 'AI Assistant',
       [AppTab.SETTINGS]: 'Settings',
     };

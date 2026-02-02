@@ -1,15 +1,42 @@
 // ============================================
 // Unified Visualizer - Tree View for All Formats
+// Auto-detects format from input
 // ============================================
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { DataFormat, TreeNode, toTree, detectFormat } from '../../core';
-import { FormatSelector, CodeEditor, TemplateManager } from '../../components/common';
+import { CodeEditor, TemplateManager } from '../../components/common';
 import { 
   ChevronRight, ChevronDown, Tag, Type, Braces, Hash,
   Network, List as ListIcon, Maximize2, Minimize2,
-  ZoomIn, ZoomOut, Move, RotateCcw, Search, X
+  ZoomIn, ZoomOut, Move, RotateCcw, Search, X,
+  FileCode, FileText
 } from 'lucide-react';
+
+// Format badge component
+const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ format, confidence }) => {
+  const icons: Record<DataFormat, React.ReactNode> = {
+    xml: <FileCode size={12} />,
+    json: <Braces size={12} />,
+    markdown: <FileText size={12} />
+  };
+  
+  const colors: Record<DataFormat, string> = {
+    xml: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    json: 'bg-green-500/20 text-green-400 border-green-500/30',
+    markdown: 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+  };
+  
+  return (
+    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${colors[format]}`}>
+      {icons[format]}
+      <span>{format.toUpperCase()}</span>
+      {confidence < 1 && (
+        <span className="opacity-60">({Math.round(confidence * 100)}%)</span>
+      )}
+    </div>
+  );
+};
 
 // ============================================
 // Tree Node Component
@@ -212,7 +239,7 @@ const MapNodeView: React.FC<MapNodeViewProps> = ({ node, defaultOpen, searchQuer
 
 export const UnifiedVisualizer: React.FC = () => {
   const [input, setInput] = useState<string>('{\n  "users": [\n    {"name": "Alice", "age": 30},\n    {"name": "Bob", "age": 25}\n  ]\n}');
-  const [inputFormat, setInputFormat] = useState<DataFormat>('json');
+  const [detectedFormat, setDetectedFormat] = useState<{ format: DataFormat; confidence: number }>({ format: 'json', confidence: 1 });
   const [tree, setTree] = useState<TreeNode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
@@ -226,13 +253,11 @@ export const UnifiedVisualizer: React.FC = () => {
   const isDragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   
-  // Auto-detect format
+  // Auto-detect format whenever input changes
   useEffect(() => {
     if (input.trim()) {
       const detected = detectFormat(input);
-      if (detected.confidence > 0.5) {
-        setInputFormat(detected.format);
-      }
+      setDetectedFormat({ format: detected.format, confidence: detected.confidence });
     }
   }, [input]);
   
@@ -244,7 +269,7 @@ export const UnifiedVisualizer: React.FC = () => {
       return;
     }
     
-    const result = toTree(input, inputFormat);
+    const result = toTree(input, detectedFormat.format);
     if (result.success && result.data) {
       setTree(result.data);
       setError(null);
@@ -254,7 +279,7 @@ export const UnifiedVisualizer: React.FC = () => {
       setTree(null);
       setError(result.error || 'Failed to parse');
     }
-  }, [input, inputFormat]);
+  }, [input, detectedFormat.format]);
   
   const toggleExpandAll = (open: boolean) => {
     setDefaultOpen(open);
@@ -290,9 +315,8 @@ export const UnifiedVisualizer: React.FC = () => {
     isDragging.current = false;
   };
   
-  const handleLoadTemplate = (content: string, format: DataFormat) => {
+  const handleLoadTemplate = (content: string, _format: DataFormat) => {
     setInput(content);
-    setInputFormat(format);
   };
   
   return (
@@ -301,12 +325,14 @@ export const UnifiedVisualizer: React.FC = () => {
       <div className="w-80 flex flex-col gap-2 flex-shrink-0">
         <div className="flex justify-between items-center">
           <label className="text-sm font-medium text-slate-400">Input</label>
-          <FormatSelector value={inputFormat} onChange={setInputFormat} size="sm" />
+          {input.trim() && (
+            <FormatBadge format={detectedFormat.format} confidence={detectedFormat.confidence} />
+          )}
         </div>
         
         <TemplateManager
           currentContent={input}
-          currentFormat={inputFormat}
+          currentFormat={detectedFormat.format}
           onLoad={handleLoadTemplate}
         />
         
@@ -314,8 +340,8 @@ export const UnifiedVisualizer: React.FC = () => {
           <CodeEditor
             value={input}
             onChange={setInput}
-            format={inputFormat}
-            placeholder="Paste content to visualize..."
+            format={detectedFormat.format}
+            placeholder="Paste XML, JSON, or Markdown to visualize..."
           />
         </div>
       </div>
@@ -411,7 +437,7 @@ export const UnifiedVisualizer: React.FC = () => {
         <div className="flex-1 bg-[#162032] border border-slate-700 rounded-lg overflow-hidden relative">
           {error ? (
             <div className="text-red-400 p-4 text-center">
-              Invalid {inputFormat.toUpperCase()}: {error}
+              Invalid {detectedFormat.format.toUpperCase()}: {error}
             </div>
           ) : !tree ? (
             <div className="text-slate-500 text-center mt-20">

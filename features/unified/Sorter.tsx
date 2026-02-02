@@ -1,19 +1,45 @@
 // ============================================
 // Unified Sorter - Sort XML/JSON/Markdown
+// Auto-detects format from input
 // ============================================
 
 import React, { useState, useEffect } from 'react';
 import { DataFormat, SortOptions } from '../../core';
-import { sort, detectFormat } from '../../core';
+import { sort, format, detectFormat } from '../../core';
 import { addToHistory } from '../../services';
-import { FormatSelector, CodeEditor, TemplateManager } from '../../components/common';
+import { CodeEditor, TemplateManager } from '../../components/common';
 import { Button } from '../../components/Button';
-import { ArrowDownAZ, ArrowUpZA, Copy, Check, Settings2 } from 'lucide-react';
+import { ArrowDownAZ, ArrowUpZA, Copy, Check, Settings2, FileCode, Braces, FileText } from 'lucide-react';
+
+// Format badge component
+const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ format, confidence }) => {
+  const icons: Record<DataFormat, React.ReactNode> = {
+    xml: <FileCode size={12} />,
+    json: <Braces size={12} />,
+    markdown: <FileText size={12} />
+  };
+  
+  const colors: Record<DataFormat, string> = {
+    xml: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    json: 'bg-green-500/20 text-green-400 border-green-500/30',
+    markdown: 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+  };
+  
+  return (
+    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${colors[format]}`}>
+      {icons[format]}
+      <span>{format.toUpperCase()}</span>
+      {confidence < 1 && (
+        <span className="opacity-60">({Math.round(confidence * 100)}%)</span>
+      )}
+    </div>
+  );
+};
 
 export const UnifiedSorter: React.FC = () => {
   const [input, setInput] = useState<string>('<root>\n  <zebra>Value</zebra>\n  <apple>Value</apple>\n  <mango>Value</mango>\n</root>');
   const [output, setOutput] = useState<string>('');
-  const [inputFormat, setInputFormat] = useState<DataFormat>('xml');
+  const [detectedFormat, setDetectedFormat] = useState<{ format: DataFormat; confidence: number }>({ format: 'xml', confidence: 1 });
   const [sortOptions, setSortOptions] = useState<Partial<SortOptions>>({
     direction: 'asc',
     recursive: true,
@@ -22,25 +48,27 @@ export const UnifiedSorter: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   
-  // Auto-detect format
+  // Auto-detect format whenever input changes
   useEffect(() => {
     if (input.trim()) {
       const detected = detectFormat(input);
-      if (detected.confidence > 0.5) {
-        setInputFormat(detected.format);
-      }
+      setDetectedFormat({ format: detected.format, confidence: detected.confidence });
     }
   }, [input]);
   
   const handleSort = (direction: 'asc' | 'desc') => {
     const options = { ...sortOptions, direction };
-    const result = sort(input, inputFormat, options);
+    const sortResult = sort(input, detectedFormat.format, options);
     
-    if (result.success && result.data) {
-      setOutput(result.data);
-      addToHistory({ content: result.data, format: inputFormat, operation: 'sort' });
+    if (sortResult.success && sortResult.data) {
+      // Sort already returns formatted output, but let's ensure it's properly formatted
+      const formatResult = format(sortResult.data, detectedFormat.format, { indentSize: 2 });
+      const finalOutput = formatResult.success && formatResult.data ? formatResult.data : sortResult.data;
+      
+      setOutput(finalOutput);
+      addToHistory({ content: finalOutput, format: detectedFormat.format, operation: 'sort' });
     } else {
-      setOutput(`Error: ${result.error}`);
+      setOutput(`Error: ${sortResult.error}`);
     }
   };
   
@@ -50,9 +78,8 @@ export const UnifiedSorter: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
   
-  const handleLoadTemplate = (content: string, format: DataFormat) => {
+  const handleLoadTemplate = (content: string, _format: DataFormat) => {
     setInput(content);
-    setInputFormat(format);
   };
   
   return (
@@ -65,7 +92,10 @@ export const UnifiedSorter: React.FC = () => {
             Sort
           </h2>
           
-          <FormatSelector value={inputFormat} onChange={setInputFormat} />
+          {/* Auto-detected format badge */}
+          {input.trim() && (
+            <FormatBadge format={detectedFormat.format} confidence={detectedFormat.confidence} />
+          )}
           
           {/* Options Toggle */}
           <button
@@ -126,7 +156,7 @@ export const UnifiedSorter: React.FC = () => {
             <label className="text-sm font-medium text-slate-400">Original</label>
             <TemplateManager
               currentContent={input}
-              currentFormat={inputFormat}
+              currentFormat={detectedFormat.format}
               onLoad={handleLoadTemplate}
               compact
             />
@@ -135,9 +165,9 @@ export const UnifiedSorter: React.FC = () => {
             <CodeEditor
               value={input}
               onChange={setInput}
-              format={inputFormat}
+              format={detectedFormat.format}
               showLineNumbers
-              placeholder="Paste content to sort..."
+              placeholder="Paste XML, JSON, or Markdown to sort..."
             />
           </div>
         </div>
@@ -159,7 +189,7 @@ export const UnifiedSorter: React.FC = () => {
           <div className="flex-1 bg-[#162032] border border-slate-700 rounded-lg overflow-hidden">
             <CodeEditor
               value={output}
-              format={inputFormat}
+              format={detectedFormat.format}
               readOnly
               showLineNumbers
               placeholder="Sorted output will appear here..."

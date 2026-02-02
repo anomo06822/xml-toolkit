@@ -1,41 +1,123 @@
 // ============================================
 // Unified Differ - Compare XML/JSON/Markdown
+// Auto-detects format, AI-powered summary
 // ============================================
 
 import React, { useState, useEffect } from 'react';
-import { DataFormat, DiffResult as DiffResultType, computeDiff, detectFormat, format, sort } from '../../core';
-import { FormatSelector, CodeEditor } from '../../components/common';
+import { DataFormat, DiffResult as DiffResultType, computeDiff, detectFormat, sort } from '../../core';
+import { CodeEditor } from '../../components/common';
 import { Button } from '../../components/Button';
-import { GitCompare, Settings2, ArrowDownAZ, Copy, Check } from 'lucide-react';
+import { GitCompare, Settings2, ArrowDownAZ, Copy, Check, Sparkles, Loader2, FileCode, Braces, FileText } from 'lucide-react';
+
+// Format badge component
+const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ format, confidence }) => {
+  const icons: Record<DataFormat, React.ReactNode> = {
+    xml: <FileCode size={12} />,
+    json: <Braces size={12} />,
+    markdown: <FileText size={12} />
+  };
+  
+  const colors: Record<DataFormat, string> = {
+    xml: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    json: 'bg-green-500/20 text-green-400 border-green-500/30',
+    markdown: 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+  };
+  
+  return (
+    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${colors[format]}`}>
+      {icons[format]}
+      <span>{format.toUpperCase()}</span>
+      {confidence < 1 && (
+        <span className="opacity-60">({Math.round(confidence * 100)}%)</span>
+      )}
+    </div>
+  );
+};
 
 export const UnifiedDiffer: React.FC = () => {
   const [leftContent, setLeftContent] = useState<string>('{\n  "name": "old",\n  "value": 1\n}');
   const [rightContent, setRightContent] = useState<string>('{\n  "name": "new",\n  "value": 2,\n  "extra": true\n}');
-  const [inputFormat, setInputFormat] = useState<DataFormat>('json');
+  const [detectedFormat, setDetectedFormat] = useState<{ format: DataFormat; confidence: number }>({ format: 'json', confidence: 1 });
   const [diffResult, setDiffResult] = useState<DiffResultType | null>(null);
   const [options, setOptions] = useState({
     normalize: true,
     ignoreWhitespace: true,
-    ignoreCase: false
+    ignoreCase: false,
+    aiSummary: false
   });
   const [showOptions, setShowOptions] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [aiSummaryText, setAiSummaryText] = useState<string | null>(null);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   
   // Auto-detect format from left content
   useEffect(() => {
     if (leftContent.trim()) {
       const detected = detectFormat(leftContent);
-      if (detected.confidence > 0.5) {
-        setInputFormat(detected.format);
-      }
+      setDetectedFormat({ format: detected.format, confidence: detected.confidence });
     }
   }, [leftContent]);
   
-  const handleCompare = () => {
-    const result = computeDiff(leftContent, rightContent, inputFormat, options);
+  const generateAiSummary = async (diff: DiffResultType) => {
+    const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      setAiSummaryText('⚠️ Gemini API key not configured. Add VITE_GEMINI_API_KEY to your environment.');
+      return;
+    }
+    
+    setIsLoadingSummary(true);
+    setAiSummaryText(null);
+    
+    try {
+      const { GoogleGenAI } = await import('@google/genai');
+      const ai = new GoogleGenAI({ apiKey });
+      
+      // Build diff summary for AI
+      const addedLines = diff.lines.filter(l => l.type === 'added').map(l => `+ ${l.content}`).join('\n');
+      const removedLines = diff.lines.filter(l => l.type === 'removed').map(l => `- ${l.content}`).join('\n');
+      
+      const prompt = `Analyze the following diff and provide a concise summary of the changes in 2-3 sentences. Focus on what was added, removed, or modified at a semantic level.
+
+Format: ${detectedFormat.format.toUpperCase()}
+
+Statistics:
+- ${diff.stats.added} lines added
+- ${diff.stats.removed} lines removed
+- ${diff.stats.unchanged} lines unchanged
+
+Added lines:
+${addedLines || '(none)'}
+
+Removed lines:
+${removedLines || '(none)'}
+
+Please provide a clear, technical summary of the changes:`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: prompt
+      });
+      
+      setAiSummaryText(response.text || 'Unable to generate summary.');
+    } catch (error: any) {
+      console.error('AI Summary error:', error);
+      setAiSummaryText(`⚠️ Error generating summary: ${error.message}`);
+    } finally {
+      setIsLoadingSummary(false);
+    }
+  };
+  
+  const handleCompare = async () => {
+    const result = computeDiff(leftContent, rightContent, detectedFormat.format, options);
     
     if (result.success && result.data) {
       setDiffResult(result.data);
+      setAiSummaryText(null);
+      
+      // Generate AI summary if enabled
+      if (options.aiSummary && result.data.stats.added + result.data.stats.removed > 0) {
+        await generateAiSummary(result.data);
+      }
     } else {
       setDiffResult(null);
       alert(`Error: ${result.error}`);
@@ -43,9 +125,8 @@ export const UnifiedDiffer: React.FC = () => {
   };
   
   const handleNormalizeInputs = () => {
-    // Sort both inputs for normalized comparison
-    const sortedLeft = sort(leftContent, inputFormat);
-    const sortedRight = sort(rightContent, inputFormat);
+    const sortedLeft = sort(leftContent, detectedFormat.format);
+    const sortedRight = sort(rightContent, detectedFormat.format);
     
     if (sortedLeft.success && sortedLeft.data) {
       setLeftContent(sortedLeft.data);
@@ -83,7 +164,10 @@ export const UnifiedDiffer: React.FC = () => {
             Compare / Diff
           </h2>
           
-          <FormatSelector value={inputFormat} onChange={setInputFormat} />
+          {/* Auto-detected format badge */}
+          {leftContent.trim() && (
+            <FormatBadge format={detectedFormat.format} confidence={detectedFormat.confidence} />
+          )}
           
           <button
             onClick={() => setShowOptions(!showOptions)}
@@ -112,7 +196,7 @@ export const UnifiedDiffer: React.FC = () => {
       
       {/* Options Panel */}
       {showOptions && (
-        <div className="bg-surface border border-slate-700 rounded-lg p-4 flex gap-6">
+        <div className="bg-surface border border-slate-700 rounded-lg p-4 flex flex-wrap gap-6">
           <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
             <input
               type="checkbox"
@@ -142,6 +226,19 @@ export const UnifiedDiffer: React.FC = () => {
             />
             Ignore case
           </label>
+          
+          <div className="w-px bg-slate-700 mx-2" />
+          
+          <label className="flex items-center gap-2 text-sm text-purple-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={options.aiSummary}
+              onChange={e => setOptions({ ...options, aiSummary: e.target.checked })}
+              className="rounded border-purple-600 text-purple-500 focus:ring-purple-500 bg-slate-800"
+            />
+            <Sparkles size={14} className="text-purple-400" />
+            AI Summary (Gemini)
+          </label>
         </div>
       )}
       
@@ -155,7 +252,7 @@ export const UnifiedDiffer: React.FC = () => {
               <CodeEditor
                 value={leftContent}
                 onChange={setLeftContent}
-                format={inputFormat}
+                format={detectedFormat.format}
                 placeholder="Paste source content..."
               />
             </div>
@@ -167,7 +264,7 @@ export const UnifiedDiffer: React.FC = () => {
               <CodeEditor
                 value={rightContent}
                 onChange={setRightContent}
-                format={inputFormat}
+                format={detectedFormat.format}
                 placeholder="Paste target content..."
               />
             </div>
@@ -195,6 +292,24 @@ export const UnifiedDiffer: React.FC = () => {
               </div>
             )}
           </div>
+          
+          {/* AI Summary Panel */}
+          {(isLoadingSummary || aiSummaryText) && (
+            <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles size={14} className="text-purple-400" />
+                <span className="text-xs font-medium text-purple-300">AI Summary</span>
+              </div>
+              {isLoadingSummary ? (
+                <div className="flex items-center gap-2 text-sm text-purple-300">
+                  <Loader2 size={14} className="animate-spin" />
+                  Analyzing differences...
+                </div>
+              ) : (
+                <p className="text-sm text-slate-300 leading-relaxed">{aiSummaryText}</p>
+              )}
+            </div>
+          )}
           
           <div className="flex-1 bg-[#162032] border border-slate-700 rounded-lg overflow-auto p-4 font-mono text-sm">
             {!diffResult ? (

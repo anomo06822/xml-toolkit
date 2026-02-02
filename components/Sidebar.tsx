@@ -3,7 +3,7 @@ import { AppTab } from '../core';
 import { clearAllData } from '../services';
 import { 
   AlignLeft, ArrowDownAZ, GitCompare, ArrowLeftRight, 
-  Network, Sparkles, FileCode, Trash2, Settings 
+  Network, Sparkles, FileCode, FileText, Trash2, Settings, Table2 
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -42,6 +42,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       label: 'Visualize', 
       icon: <Network size={20} />,
       description: 'Tree/graph view'
+    },
+    { 
+      id: AppTab.MARKDOWN, 
+      label: 'Markdown', 
+      icon: <FileText size={20} />,
+      description: 'README preview'
+    },
+    { 
+      id: AppTab.TABLE, 
+      label: 'Table', 
+      icon: <Table2 size={20} />,
+      description: 'Markdown tables'
     },
     { 
       id: AppTab.AI, 
@@ -151,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         <div className="text-center text-[10px] text-slate-600">
           <kbd className="bg-slate-700 px-1.5 py-0.5 rounded text-slate-400">Alt</kbd>
           <span className="mx-1">+</span>
-          <kbd className="bg-slate-700 px-1.5 py-0.5 rounded text-slate-400">1-6</kbd>
+          <kbd className="bg-slate-700 px-1.5 py-0.5 rounded text-slate-400">1-8</kbd>
           <span className="ml-1">to switch tabs</span>
         </div>
       </div>

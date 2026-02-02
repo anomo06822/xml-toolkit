@@ -111,6 +111,8 @@ export enum AppTab {
   DIFF = 'diff',
   CONVERTER = 'converter',
   VISUALIZER = 'visualizer',
+  MARKDOWN = 'markdown',
+  TABLE = 'table',
   AI = 'ai',
   SETTINGS = 'settings'
 }

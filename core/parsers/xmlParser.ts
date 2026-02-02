@@ -46,30 +46,53 @@ export const formatXml = (xml: string, options: Partial<FormatOptions> = {}): Op
     let indentLevel = 0;
     const nodes = minified.data.match(/<[^>]+>|[^<]+/g) || [];
     
-    for (const node of nodes) {
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      
       if (node.startsWith('</')) {
         // Closing tag
         indentLevel = Math.max(0, indentLevel - 1);
         formatted += indent.repeat(indentLevel) + node + '\n';
-      } else if (node.startsWith('<?')) {
+        continue;
+      }
+      
+      if (node.startsWith('<?')) {
         // XML declaration
         formatted += node + '\n';
-      } else if (node.startsWith('<!')) {
+        continue;
+      }
+      
+      if (node.startsWith('<!')) {
         // DOCTYPE, Comment, CDATA
         formatted += indent.repeat(indentLevel) + node + '\n';
-      } else if (node.startsWith('<') && node.endsWith('/>')) {
+        continue;
+      }
+      
+      if (node.startsWith('<') && node.endsWith('/>')) {
         // Self-closing tag
         formatted += indent.repeat(indentLevel) + node + '\n';
-      } else if (node.startsWith('<')) {
+        continue;
+      }
+      
+      if (node.startsWith('<')) {
         // Opening tag
-        formatted += indent.repeat(indentLevel) + node + '\n';
-        if (!node.endsWith('/>')) {
+        const next = nodes[i + 1];
+        const nextNext = nodes[i + 2];
+        const hasInlineText = next && !next.startsWith('<') && next.trim() && nextNext && nextNext.startsWith('</');
+        
+        if (hasInlineText) {
+          formatted += indent.repeat(indentLevel) + node + next.trim() + nextNext + '\n';
+          i += 2;
+        } else {
+          formatted += indent.repeat(indentLevel) + node + '\n';
           indentLevel++;
         }
-      } else if (node.trim()) {
+        continue;
+      }
+      
+      if (node.trim()) {
         // Text content
         formatted += indent.repeat(indentLevel) + node.trim() + '\n';
-        indentLevel = Math.max(0, indentLevel - 1);
       }
     }
     

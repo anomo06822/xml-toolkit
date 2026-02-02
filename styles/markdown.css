@@ -1,0 +1,27 @@
+.markdown-preview {
+  padding: 1.25rem;
+  border: 1px solid #1f2937;
+  border-radius: 0.75rem;
+  background: #0d1117;
+  box-sizing: border-box;
+}
+
+.markdown-preview.markdown-body {
+  background: #0d1117;
+}
+
+.markdown-preview > :first-child {
+  margin-top: 0;
+}
+
+.markdown-preview > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-preview img {
+  max-width: 100%;
+}
+
+.markdown-preview pre {
+  background: #0b1220;
+}
