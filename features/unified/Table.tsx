@@ -5,6 +5,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Button } from '../../components/Button';
 import { MarkdownPreview } from '../../components/common';
+import { formatShortcut, isPrimaryShortcut } from '../../services';
 import { 
   Table2, Plus, Trash2, Copy, Check, Download,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
@@ -96,6 +97,31 @@ export const UnifiedTable: React.FC = () => {
   const [viewMode, setViewMode] = useState<'edit' | 'markdown' | 'preview'>('edit');
   const [copied, setCopied] = useState(false);
   const [markdownInput, setMarkdownInput] = useState('');
+
+  React.useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isPrimaryShortcut(e) || !e.shiftKey) return;
+      const key = e.key.toLowerCase();
+      if (key === 'c') {
+        e.preventDefault();
+        handleCopy();
+      }
+      if (key === 'd') {
+        e.preventDefault();
+        handleDownload();
+      }
+      if (key === 'r') {
+        e.preventDefault();
+        addRow();
+      }
+      if (key === 'l') {
+        e.preventDefault();
+        addColumn();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
   
   // Generate markdown from current table
   const markdown = useMemo(() => tableToMarkdown(tableData), [tableData]);
@@ -284,10 +310,10 @@ export const UnifiedTable: React.FC = () => {
         
         <div className="flex gap-2">
           <Button variant="secondary" onClick={handleCopy} icon={copied ? <Check size={16} /> : <Copy size={16} />}>
-            {copied ? 'Copied!' : 'Copy'}
+            {copied ? 'Copied!' : `Copy (${formatShortcut('C', true)})`}
           </Button>
           <Button variant="secondary" onClick={handleDownload} icon={<Download size={16} />}>
-            Download
+            Download ({formatShortcut('D', true)})
           </Button>
         </div>
       </div>
@@ -299,10 +325,10 @@ export const UnifiedTable: React.FC = () => {
             {/* Toolbar */}
             <div className="flex gap-2 bg-surface p-3 rounded-lg border border-slate-700">
               <Button size="sm" onClick={addColumn} icon={<Plus size={14} />}>
-                Add Column
+                Add Column ({formatShortcut('L', true)})
               </Button>
               <Button size="sm" onClick={addRow} icon={<Plus size={14} />}>
-                Add Row
+                Add Row ({formatShortcut('R', true)})
               </Button>
               <div className="flex-1" />
               <span className="text-xs text-slate-500 self-center">

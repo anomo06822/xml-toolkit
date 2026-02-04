@@ -7,8 +7,19 @@ import React, { useState, useEffect } from 'react';
 import { DataFormat, DiffResult as DiffResultType, computeDiff, detectFormat, sort } from '../../core';
 import { CodeEditor } from '../../components/common';
 import { Button } from '../../components/Button';
-import { addGeminiApiLog, getGeminiToken, getGeminiModel, setAiContextByFormat, toTokenPreview } from '../../services';
+import { addGeminiApiLog, formatShortcut, getGeminiToken, getGeminiModel, isPrimaryShortcut, setAiContextByFormat, toTokenPreview } from '../../services';
 import { GitCompare, Settings2, ArrowDownAZ, Copy, Check, Sparkles, Loader2, FileCode, Braces, FileText } from 'lucide-react';
+
+const SAMPLE_DIFF_LEFT = `{
+  "name": "old",
+  "value": 1
+}`;
+
+const SAMPLE_DIFF_RIGHT = `{
+  "name": "new",
+  "value": 2,
+  "extra": true
+}`;
 
 // Format badge component
 const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ format, confidence }) => {
@@ -36,8 +47,8 @@ const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ for
 };
 
 export const UnifiedDiffer: React.FC = () => {
-  const [leftContent, setLeftContent] = useState<string>('{\n  "name": "old",\n  "value": 1\n}');
-  const [rightContent, setRightContent] = useState<string>('{\n  "name": "new",\n  "value": 2,\n  "extra": true\n}');
+  const [leftContent, setLeftContent] = useState<string>('');
+  const [rightContent, setRightContent] = useState<string>('');
   const [detectedFormat, setDetectedFormat] = useState<{ format: DataFormat; confidence: number }>({ format: 'json', confidence: 1 });
   const [diffResult, setDiffResult] = useState<DiffResultType | null>(null);
   const [options, setOptions] = useState({
@@ -65,6 +76,22 @@ export const UnifiedDiffer: React.FC = () => {
       setAiContextByFormat(detectedFormat.format, rightContent, 'differ:right');
     }
   }, [rightContent, detectedFormat.format]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isPrimaryShortcut(e)) return;
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        void handleCompare();
+      }
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        handleNormalizeInputs();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
   
   const generateAiSummary = async (diff: DiffResultType) => {
     const apiKey = getGeminiToken();
@@ -216,10 +243,10 @@ Please provide a clear, technical summary of the changes:`;
         
         <div className="flex gap-2">
           <Button variant="secondary" onClick={handleNormalizeInputs} icon={<ArrowDownAZ size={16} />}>
-            Normalize
+            Normalize <span className="ml-1 opacity-70">({formatShortcut('Enter', true)})</span>
           </Button>
           <Button onClick={handleCompare} icon={<GitCompare size={16} />}>
-            Compare
+            Compare <span className="ml-1 opacity-70">({formatShortcut('Enter')})</span>
           </Button>
         </div>
       </div>
@@ -283,7 +310,7 @@ Please provide a clear, technical summary of the changes:`;
                 value={leftContent}
                 onChange={setLeftContent}
                 format={detectedFormat.format}
-                placeholder="Paste source content..."
+                placeholder={SAMPLE_DIFF_LEFT}
               />
             </div>
           </div>
@@ -295,7 +322,7 @@ Please provide a clear, technical summary of the changes:`;
                 value={rightContent}
                 onChange={setRightContent}
                 format={detectedFormat.format}
-                placeholder="Paste target content..."
+                placeholder={SAMPLE_DIFF_RIGHT}
               />
             </div>
           </div>

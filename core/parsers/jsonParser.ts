@@ -139,7 +139,11 @@ export const jsonToTree = (jsonStr: string): OperationResult<TreeNode> => {
 };
 
 // Convert JSON to XML
-export const jsonToXml = (jsonStr: string, rootName = 'root'): OperationResult<string> => {
+export const jsonToXml = (
+  jsonStr: string,
+  rootName = 'root',
+  arrayItemName = 'item'
+): OperationResult<string> => {
   const parseResult = parseJson(jsonStr);
   if (!parseResult.success) {
     return { success: false, error: parseResult.error };
@@ -201,7 +205,12 @@ export const jsonToXml = (jsonStr: string, rootName = 'root'): OperationResult<s
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   
   // If the data has a single root key, use it
-  if (typeof data === 'object' && !Array.isArray(data)) {
+  if (Array.isArray(data)) {
+    const children = data
+      .map(item => valueToXml(item, arrayItemName, '  '))
+      .join('');
+    xml += `<${rootName}>\n${children}</${rootName}>`;
+  } else if (typeof data === 'object' && data !== null) {
     const keys = Object.keys(data);
     if (keys.length === 1) {
       xml += valueToXml(data[keys[0]], keys[0]);
