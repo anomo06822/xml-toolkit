@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { DataFormat, DiffResult as DiffResultType, computeDiff, detectFormat, sort } from '../../core';
 import { CodeEditor } from '../../components/common';
 import { Button } from '../../components/Button';
-import { getGeminiToken, getGeminiModel } from '../../services';
+import { addGeminiApiLog, getGeminiToken, getGeminiModel, toTokenPreview } from '../../services';
 import { GitCompare, Settings2, ArrowDownAZ, Copy, Check, Sparkles, Loader2, FileCode, Braces, FileText } from 'lucide-react';
 
 // Format badge component
@@ -73,6 +73,7 @@ export const UnifiedDiffer: React.FC = () => {
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey });
       const model = getGeminiModel();
+      const tokenPreview = toTokenPreview(apiKey);
       
       // Build diff summary for AI
       const addedLines = diff.lines.filter(l => l.type === 'added').map(l => `+ ${l.content}`).join('\n');
@@ -95,14 +96,34 @@ ${removedLines || '(none)'}
 
 Please provide a clear, technical summary of the changes:`;
 
+      const requestBody = {
+        model,
+        contents: prompt
+      };
       const response = await ai.models.generateContent({
         model,
         contents: prompt
+      });
+      addGeminiApiLog({
+        source: 'diff-summary',
+        model,
+        tokenPreview,
+        requestBody: JSON.stringify(requestBody, null, 2),
+        responseBody: JSON.stringify({ text: response.text || '' }, null, 2),
+        success: true
       });
       
       setAiSummaryText(response.text || 'Unable to generate summary.');
     } catch (error: any) {
       console.error('AI Summary error:', error);
+      addGeminiApiLog({
+        source: 'diff-summary',
+        model: getGeminiModel(),
+        tokenPreview: toTokenPreview(getGeminiToken()),
+        requestBody: JSON.stringify({ format: detectedFormat.format }, null, 2),
+        error: error?.message || 'Unknown error',
+        success: false
+      });
       setAiSummaryText(`⚠️ Error generating summary: ${error.message}`);
     } finally {
       setIsLoadingSummary(false);

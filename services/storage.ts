@@ -9,6 +9,7 @@ const TEMPLATES_KEY = `${STORAGE_PREFIX}templates`;
 const WORKSPACES_KEY = `${STORAGE_PREFIX}workspaces`;
 const SETTINGS_KEY = `${STORAGE_PREFIX}settings`;
 const HISTORY_KEY = `${STORAGE_PREFIX}history`;
+const GEMINI_API_LOGS_KEY = `${STORAGE_PREFIX}gemini_api_logs`;
 
 // ============================================
 // Templates Management
@@ -224,6 +225,15 @@ export const getGeminiModel = (): GeminiModel => {
   return resolveGeminiModel(getSettings().geminiModel);
 };
 
+export const toTokenPreview = (token: string): string => {
+  const normalized = token.trim();
+  if (!normalized) return '(missing)';
+  if (normalized.length <= 10) {
+    return `${normalized.slice(0, 2)}***${normalized.slice(-2)}`;
+  }
+  return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
+};
+
 // ============================================
 // History (for undo/clipboard history)
 // ============================================
@@ -269,6 +279,57 @@ export const addToHistory = (entry: Omit<HistoryEntry, 'id' | 'timestamp'>): His
 
 export const clearHistory = (): void => {
   localStorage.setItem(HISTORY_KEY, JSON.stringify([]));
+};
+
+// ============================================
+// Gemini API Logs
+// ============================================
+
+export interface GeminiApiLogEntry {
+  id: string;
+  timestamp: number;
+  source: 'assistant' | 'diff-summary';
+  model: GeminiModel;
+  tokenPreview: string;
+  requestBody: string;
+  responseBody?: string;
+  error?: string;
+  success: boolean;
+}
+
+const MAX_GEMINI_API_LOGS = 100;
+
+export const getGeminiApiLogs = (): GeminiApiLogEntry[] => {
+  try {
+    const data = localStorage.getItem(GEMINI_API_LOGS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error('Failed to load Gemini API logs:', e);
+    return [];
+  }
+};
+
+export const addGeminiApiLog = (
+  log: Omit<GeminiApiLogEntry, 'id' | 'timestamp'>
+): GeminiApiLogEntry => {
+  const logs = getGeminiApiLogs();
+  const newLog: GeminiApiLogEntry = {
+    ...log,
+    id: crypto.randomUUID(),
+    timestamp: Date.now()
+  };
+
+  logs.unshift(newLog);
+  if (logs.length > MAX_GEMINI_API_LOGS) {
+    logs.pop();
+  }
+
+  localStorage.setItem(GEMINI_API_LOGS_KEY, JSON.stringify(logs));
+  return newLog;
+};
+
+export const clearGeminiApiLogs = (): void => {
+  localStorage.setItem(GEMINI_API_LOGS_KEY, JSON.stringify([]));
 };
 
 // ============================================

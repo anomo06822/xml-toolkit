@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppTab } from '../core';
-import { clearAllData } from '../services';
+import { AppSettings, clearAllData, GEMINI_MODEL_OPTIONS, getSettings, updateSettings } from '../services';
 import { 
   AlignLeft, ArrowDownAZ, GitCompare, ArrowLeftRight, 
-  Network, Sparkles, FileCode, FileText, Trash2, Settings, Table2 
+  Network, Sparkles, FileCode, FileText, Trash2, Settings, Table2, ScrollText
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -12,6 +12,12 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
+  const [geminiModel, setGeminiModel] = useState<AppSettings['geminiModel']>(() => getSettings().geminiModel);
+
+  useEffect(() => {
+    setGeminiModel(getSettings().geminiModel);
+  }, [activeTab]);
+
   const items = [
     { 
       id: AppTab.FORMATTER, 
@@ -62,6 +68,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       highlight: true,
       description: 'Gemini powered'
     },
+    {
+      id: AppTab.API_LOGS,
+      label: 'API Logs',
+      icon: <ScrollText size={20} />,
+      description: 'Gemini requests'
+    },
   ];
 
   const handleClearData = () => {
@@ -69,6 +81,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       clearAllData();
       window.location.reload();
     }
+  };
+
+  const handleModelChange = (model: AppSettings['geminiModel']) => {
+    setGeminiModel(model);
+    updateSettings({ geminiModel: model });
   };
 
   return (
@@ -123,6 +140,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
             </div>
           </button>
         ))}
+
+        <div className="mt-4 px-4">
+          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Gemini Model
+          </div>
+          <select
+            value={geminiModel}
+            onChange={(e) => handleModelChange(e.target.value as AppSettings['geminiModel'])}
+            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200"
+          >
+            {GEMINI_MODEL_OPTIONS.map((model) => (
+              <option key={model.value} value={model.value}>
+                {model.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </nav>
 
       {/* Footer */}
@@ -163,7 +197,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         <div className="text-center text-[10px] text-slate-600">
           <kbd className="bg-slate-700 px-1.5 py-0.5 rounded text-slate-400">Alt</kbd>
           <span className="mx-1">+</span>
-          <kbd className="bg-slate-700 px-1.5 py-0.5 rounded text-slate-400">1-8</kbd>
+          <kbd className="bg-slate-700 px-1.5 py-0.5 rounded text-slate-400">1-9</kbd>
           <span className="ml-1">to switch tabs</span>
         </div>
       </div>
