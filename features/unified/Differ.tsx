@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { DataFormat, DiffResult as DiffResultType, computeDiff, detectFormat, sort } from '../../core';
 import { CodeEditor } from '../../components/common';
 import { Button } from '../../components/Button';
+import { getGeminiToken } from '../../services';
 import { GitCompare, Settings2, ArrowDownAZ, Copy, Check, Sparkles, Loader2, FileCode, Braces, FileText } from 'lucide-react';
 
 // Format badge component
@@ -59,9 +60,9 @@ export const UnifiedDiffer: React.FC = () => {
   }, [leftContent]);
   
   const generateAiSummary = async (diff: DiffResultType) => {
-    const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+    const apiKey = getGeminiToken();
     if (!apiKey) {
-      setAiSummaryText('⚠️ Gemini API key not configured. Add VITE_GEMINI_API_KEY to your environment.');
+      setAiSummaryText('⚠️ Gemini token not configured. Set it in Settings > AI, or use VITE_GEMINI_API_KEY.');
       return;
     }
     

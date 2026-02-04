@@ -149,6 +149,7 @@ export interface AppSettings {
   autoFormat: boolean;
   fontSize: number;
   showLineNumbers: boolean;
+  geminiToken: string;
 }
 
 const defaultSettings: AppSettings = {
@@ -159,7 +160,8 @@ const defaultSettings: AppSettings = {
   autoDetectFormat: true,
   autoFormat: false,
   fontSize: 14,
-  showLineNumbers: true
+  showLineNumbers: true,
+  geminiToken: ''
 };
 
 export const getSettings = (): AppSettings => {
@@ -182,6 +184,16 @@ export const updateSettings = (updates: Partial<AppSettings>): AppSettings => {
 export const resetSettings = (): AppSettings => {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(defaultSettings));
   return defaultSettings;
+};
+
+export const getGeminiToken = (): string => {
+  const settingsToken = getSettings().geminiToken?.trim();
+  if (settingsToken) {
+    return settingsToken;
+  }
+
+  const env = (import.meta as any).env || {};
+  return env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY || '';
 };
 
 // ============================================

@@ -131,17 +131,24 @@ export const UnifiedConverter: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex gap-2">
-          <Button onClick={handleConvertForward} icon={<ArrowRight size={16} />}>
-            Convert →
+        <div className="flex items-center gap-2 rounded-xl border border-slate-600/40 bg-[#172236] p-1.5 shadow-inner">
+          <Button
+            onClick={handleConvertForward}
+            className="gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_18px_rgba(59,130,246,0.32)] hover:from-blue-400 hover:to-blue-500"
+          >
+            <ArrowRight size={14} />
+            <span>Convert</span>
+            <ArrowRight size={14} />
           </Button>
           <Button
-            variant="secondary"
+            variant="ghost"
             onClick={handleConvertBackward}
-            icon={<ArrowLeft size={16} />}
             disabled={!output.trim()}
+            className="gap-2 rounded-lg border border-slate-600 bg-slate-900/20 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-slate-500 hover:bg-slate-800/30"
           >
-            ← Convert
+            <ArrowLeft size={14} />
+            <span>Convert</span>
+            <ArrowLeft size={14} />
           </Button>
         </div>
       </div>

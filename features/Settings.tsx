@@ -159,6 +159,27 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* AI Settings */}
+      <section className="bg-surface border border-slate-700 rounded-lg p-6 mb-6">
+        <h2 className="text-lg font-semibold text-slate-200 mb-4">AI</h2>
+
+        <div className="flex justify-between items-start gap-4">
+          <div>
+            <label className="text-sm font-medium text-slate-300">Gemini Token</label>
+            <p className="text-xs text-slate-500">
+              Used for AI features. Stored only in your browser local storage.
+            </p>
+          </div>
+          <input
+            type="password"
+            value={settings.geminiToken}
+            onChange={(e) => handleChange('geminiToken', e.target.value)}
+            placeholder="Paste Gemini API token"
+            className="w-80 max-w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none"
+          />
+        </div>
+      </section>
       
       {/* Data Management */}
       <section className="bg-surface border border-slate-700 rounded-lg p-6 mb-6">

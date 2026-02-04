@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GoogleGenAI } from '@google/genai';
-import { getPersistentValue, setPersistentValue } from '../services/storage';
+import { getGeminiToken, getPersistentValue, setPersistentValue } from '../services/storage';
 import { Button } from '../components/Button';
 import { Sparkles, MessageSquare, Loader2, Copy, Check, Trash2 } from 'lucide-react';
 
@@ -33,7 +33,12 @@ export const GeminiAssistant: React.FC = () => {
     setLoading(true);
     
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      const apiKey = getGeminiToken();
+      if (!apiKey) {
+        throw new Error('Gemini token is missing. Please set it in Settings > AI.');
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
       
       const systemPrompt = `You are an expert in data formats including XML, JSON, and Markdown. 
 You help users with:
@@ -65,7 +70,7 @@ Provide clear, concise, and practical answers. Include code examples when releva
     } catch (e: any) {
       const errorMessage: Message = {
         role: 'assistant',
-        content: `Error: ${e.message}\n\nMake sure GEMINI_API_KEY is configured in your .env file.`,
+        content: `Error: ${e.message}\n\nSet Gemini token in Settings > AI, or configure VITE_GEMINI_API_KEY.`,
         timestamp: Date.now()
       };
       
