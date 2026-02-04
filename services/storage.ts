@@ -150,7 +150,30 @@ export interface AppSettings {
   fontSize: number;
   showLineNumbers: boolean;
   geminiToken: string;
+  geminiModel: GeminiModel;
 }
+
+export const GEMINI_MODEL_OPTIONS = [
+  { label: 'Gemini 3 Pro', value: 'gemini-3-pro' },
+  { label: 'Gemini 3 Flash', value: 'gemini-3-flash' },
+  { label: 'Gemini 2.5 Flash', value: 'gemini-2.5-flash' },
+  { label: 'Gemini 2.5 Flash-Lite', value: 'gemini-2.5-flash-lite' }
+] as const;
+
+export const GEMINI_MODELS = GEMINI_MODEL_OPTIONS.map((option) => option.value) as readonly string[];
+
+export type GeminiModel = typeof GEMINI_MODEL_OPTIONS[number]['value'];
+
+const DEFAULT_GEMINI_MODEL: GeminiModel = 'gemini-2.5-flash';
+
+const resolveGeminiModel = (model?: string): GeminiModel => {
+  if (!model) {
+    return DEFAULT_GEMINI_MODEL;
+  }
+  return GEMINI_MODELS.includes(model as GeminiModel)
+    ? (model as GeminiModel)
+    : DEFAULT_GEMINI_MODEL;
+};
 
 const defaultSettings: AppSettings = {
   theme: 'dark',
@@ -161,7 +184,8 @@ const defaultSettings: AppSettings = {
   autoFormat: false,
   fontSize: 14,
   showLineNumbers: true,
-  geminiToken: ''
+  geminiToken: '',
+  geminiModel: DEFAULT_GEMINI_MODEL
 };
 
 export const getSettings = (): AppSettings => {
@@ -194,6 +218,10 @@ export const getGeminiToken = (): string => {
 
   const env = (import.meta as any).env || {};
   return env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY || '';
+};
+
+export const getGeminiModel = (): GeminiModel => {
+  return resolveGeminiModel(getSettings().geminiModel);
 };
 
 // ============================================

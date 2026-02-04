@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GoogleGenAI } from '@google/genai';
-import { getGeminiToken, getPersistentValue, setPersistentValue } from '../services/storage';
+import { getGeminiToken, getGeminiModel, getPersistentValue, setPersistentValue } from '../services/storage';
 import { Button } from '../components/Button';
 import { Sparkles, MessageSquare, Loader2, Copy, Check, Trash2 } from 'lucide-react';
 
@@ -39,6 +39,7 @@ export const GeminiAssistant: React.FC = () => {
       }
 
       const ai = new GoogleGenAI({ apiKey });
+      const model = getGeminiModel();
       
       const systemPrompt = `You are an expert in data formats including XML, JSON, and Markdown. 
 You help users with:
@@ -53,7 +54,7 @@ You help users with:
 Provide clear, concise, and practical answers. Include code examples when relevant.`;
       
       const result = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model,
         contents: `${systemPrompt}\n\nUser: ${input}`,
       });
 
