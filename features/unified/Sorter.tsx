@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { DataFormat, SortOptions } from '../../core';
 import { sort, format, detectFormat } from '../../core';
-import { addToHistory } from '../../services';
+import { addToHistory, setAiContextByFormat } from '../../services';
 import { CodeEditor, TemplateManager } from '../../components/common';
 import { Button } from '../../components/Button';
 import { ArrowDownAZ, ArrowUpZA, Copy, Check, Settings2, FileCode, Braces, FileText } from 'lucide-react';
@@ -53,6 +53,7 @@ export const UnifiedSorter: React.FC = () => {
     if (input.trim()) {
       const detected = detectFormat(input);
       setDetectedFormat({ format: detected.format, confidence: detected.confidence });
+      setAiContextByFormat(detected.format, input, 'sorter:input');
     }
   }, [input]);
   
@@ -67,6 +68,7 @@ export const UnifiedSorter: React.FC = () => {
       
       setOutput(finalOutput);
       addToHistory({ content: finalOutput, format: detectedFormat.format, operation: 'sort' });
+      setAiContextByFormat(detectedFormat.format, finalOutput, 'sorter:output');
     } else {
       setOutput(`Error: ${sortResult.error}`);
     }

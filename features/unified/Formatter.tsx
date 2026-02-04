@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { DataFormat } from '../../core';
 import { format, minify, detectFormat } from '../../core';
-import { addToHistory } from '../../services';
+import { addToHistory, setAiContextByFormat } from '../../services';
 import { CodeEditor, TemplateManager } from '../../components/common';
 import { Button } from '../../components/Button';
 import { 
@@ -54,6 +54,7 @@ export const UnifiedFormatter: React.FC = () => {
       const detected = detectFormat(input);
       setDetectedFormat({ format: detected.format, confidence: detected.confidence });
       setValidation({ valid: detected.isValid, error: detected.error });
+      setAiContextByFormat(detected.format, input, 'formatter:input');
     } else {
       setValidation(null);
     }
@@ -64,6 +65,7 @@ export const UnifiedFormatter: React.FC = () => {
     if (result.success && result.data) {
       setOutput(result.data);
       addToHistory({ content: result.data, format: detectedFormat.format, operation: 'format' });
+      setAiContextByFormat(detectedFormat.format, result.data, 'formatter:output');
     } else {
       setOutput(`Error: ${result.error}`);
     }
@@ -74,6 +76,7 @@ export const UnifiedFormatter: React.FC = () => {
     if (result.success && result.data) {
       setOutput(result.data);
       addToHistory({ content: result.data, format: detectedFormat.format, operation: 'minify' });
+      setAiContextByFormat(detectedFormat.format, result.data, 'formatter:output');
     } else {
       setOutput(`Error: ${result.error}`);
     }

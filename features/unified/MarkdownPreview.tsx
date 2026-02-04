@@ -2,9 +2,10 @@
 // Unified Markdown Preview - README-style rendering
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CodeEditor, TemplateManager, MarkdownPreview } from '../../components/common';
 import { Button } from '../../components/Button';
+import { setAiContextByFormat } from '../../services';
 import { FileText, Copy, Check, Download, Columns, Maximize2 } from 'lucide-react';
 
 const defaultMarkdown = `# DataToolkit
@@ -46,6 +47,11 @@ export const UnifiedMarkdownPreview: React.FC = () => {
   const [input, setInput] = useState<string>(defaultMarkdown);
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState<'split' | 'preview'>('split');
+
+  useEffect(() => {
+    if (!input.trim()) return;
+    setAiContextByFormat('markdown', input, 'markdown-preview:input');
+  }, [input]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(input);

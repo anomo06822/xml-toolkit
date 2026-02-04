@@ -10,6 +10,8 @@ const WORKSPACES_KEY = `${STORAGE_PREFIX}workspaces`;
 const SETTINGS_KEY = `${STORAGE_PREFIX}settings`;
 const HISTORY_KEY = `${STORAGE_PREFIX}history`;
 const GEMINI_API_LOGS_KEY = `${STORAGE_PREFIX}gemini_api_logs`;
+const AI_CONTEXT_KEY = `${STORAGE_PREFIX}ai_context`;
+const GEMINI_UPLOAD_HISTORY_KEY = `${STORAGE_PREFIX}gemini_upload_history`;
 
 // ============================================
 // Templates Management
@@ -330,6 +332,94 @@ export const addGeminiApiLog = (
 
 export const clearGeminiApiLogs = (): void => {
   localStorage.setItem(GEMINI_API_LOGS_KEY, JSON.stringify([]));
+};
+
+// ============================================
+// AI Context
+// ============================================
+
+export interface AiContextState {
+  xml?: string;
+  json?: string;
+  markdown?: string;
+  text?: string;
+  source?: string;
+  updatedAt?: number;
+  meta?: Partial<Record<DataFormat | 'text', { source?: string; updatedAt?: number }>>;
+}
+
+const normalizeContextContent = (content: string): string => content.trim();
+
+export const getAiContext = (): AiContextState => {
+  try {
+    const data = localStorage.getItem(AI_CONTEXT_KEY);
+    return data ? JSON.parse(data) : {};
+  } catch (e) {
+    console.error('Failed to load AI context:', e);
+    return {};
+  }
+};
+
+export const setAiContextByFormat = (
+  format: DataFormat | 'text',
+  content: string,
+  source?: string
+): AiContextState => {
+  const current = getAiContext();
+  const normalizedContent = normalizeContextContent(content);
+  const updated: AiContextState = {
+    ...current,
+    [format]: normalizedContent,
+    source: source || current.source,
+    updatedAt: Date.now(),
+    meta: {
+      ...(current.meta || {}),
+      [format]: {
+        source: source || current.meta?.[format]?.source,
+        updatedAt: Date.now()
+      }
+    }
+  };
+  localStorage.setItem(AI_CONTEXT_KEY, JSON.stringify(updated));
+  return updated;
+};
+
+export interface GeminiUploadHistoryEntry {
+  id: string;
+  name: string;
+  format: DataFormat | 'text';
+  content: string;
+  uploadedAt: number;
+  source: string;
+}
+
+const MAX_GEMINI_UPLOAD_HISTORY = 10;
+
+export const getGeminiUploadHistory = (): GeminiUploadHistoryEntry[] => {
+  try {
+    const data = localStorage.getItem(GEMINI_UPLOAD_HISTORY_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error('Failed to load Gemini upload history:', e);
+    return [];
+  }
+};
+
+export const addGeminiUploadHistory = (
+  entry: Omit<GeminiUploadHistoryEntry, 'id' | 'uploadedAt'>
+): GeminiUploadHistoryEntry => {
+  const history = getGeminiUploadHistory();
+  const item: GeminiUploadHistoryEntry = {
+    ...entry,
+    id: crypto.randomUUID(),
+    uploadedAt: Date.now()
+  };
+  history.unshift(item);
+  if (history.length > MAX_GEMINI_UPLOAD_HISTORY) {
+    history.length = MAX_GEMINI_UPLOAD_HISTORY;
+  }
+  localStorage.setItem(GEMINI_UPLOAD_HISTORY_KEY, JSON.stringify(history));
+  return item;
 };
 
 // ============================================

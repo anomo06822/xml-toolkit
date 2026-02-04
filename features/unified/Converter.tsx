@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { DataFormat, convert, detectFormat, format } from '../../core';
-import { addToHistory } from '../../services';
+import { addToHistory, setAiContextByFormat } from '../../services';
 import { FormatSelector, CodeEditor, TemplateManager } from '../../components/common';
 import { Button } from '../../components/Button';
 import { ArrowRight, ArrowLeft, ArrowLeftRight, Copy, Check, Download, RefreshCw } from 'lucide-react';
@@ -30,6 +30,12 @@ export const UnifiedConverter: React.FC = () => {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!input.trim()) return;
+    const detected = detectFormat(input);
+    setAiContextByFormat(detected.format, input, 'converter:input');
+  }, [input]);
   
   const handleConvertForward = () => {
     setError(null);
@@ -39,6 +45,7 @@ export const UnifiedConverter: React.FC = () => {
     if (result.success && result.data) {
       setOutput(result.data);
       addToHistory({ content: result.data, format: toFormat, operation: 'convert' });
+      setAiContextByFormat(toFormat, result.data, 'converter:output');
     } else {
       setError(result.error || 'Conversion failed');
       setOutput('');
@@ -58,6 +65,7 @@ export const UnifiedConverter: React.FC = () => {
     if (result.success && result.data) {
       setInput(result.data);
       addToHistory({ content: result.data, format: fromFormat, operation: 'convert' });
+      setAiContextByFormat(fromFormat, result.data, 'converter:reverse-output');
     } else {
       setError(result.error || 'Reverse conversion failed');
     }
@@ -103,6 +111,7 @@ export const UnifiedConverter: React.FC = () => {
   const handleLoadTemplate = (content: string, format: DataFormat) => {
     setInput(content);
     setFromFormat(format);
+    setAiContextByFormat(format, content, 'converter:template');
   };
   
   return (

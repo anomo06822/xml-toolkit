@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { DataFormat, TreeNode, toTree, detectFormat } from '../../core';
 import { CodeEditor, TemplateManager } from '../../components/common';
+import { setAiContextByFormat } from '../../services';
 import { 
   ChevronRight, ChevronDown, Tag, Type, Braces, Hash,
   Network, List as ListIcon, Maximize2, Minimize2,
@@ -258,6 +259,7 @@ export const UnifiedVisualizer: React.FC = () => {
     if (input.trim()) {
       const detected = detectFormat(input);
       setDetectedFormat({ format: detected.format, confidence: detected.confidence });
+      setAiContextByFormat(detected.format, input, 'visualizer:input');
     }
   }, [input]);
   
