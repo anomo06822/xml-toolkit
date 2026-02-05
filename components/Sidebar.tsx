@@ -3,7 +3,7 @@ import { AppTab } from '../core';
 import { AppSettings, clearAllData, GEMINI_MODEL_OPTIONS, getSettings, updateSettings } from '../services';
 import { 
   AlignLeft, ArrowDownAZ, GitCompare, ArrowLeftRight, 
-  Network, Sparkles, FileCode, FileText, Trash2, Settings, Table2, ScrollText
+  Network, Sparkles, FileCode, FileText, Trash2, Settings, Table2, ScrollText, Languages
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -73,6 +73,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
       label: 'API Logs',
       icon: <ScrollText size={20} />,
       description: 'Gemini requests'
+    },
+    {
+      id: AppTab.TRANSLATE,
+      label: 'Translate',
+      icon: <Languages size={20} />,
+      description: 'EN ↔ 繁中'
     },
   ];
 
@@ -197,7 +203,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         <div className="text-center text-[10px] text-slate-600">
           <kbd className="bg-slate-700 px-1.5 py-0.5 rounded text-slate-400">Alt</kbd>
           <span className="mx-1">+</span>
-          <kbd className="bg-slate-700 px-1.5 py-0.5 rounded text-slate-400">1-9</kbd>
+          <kbd className="bg-slate-700 px-1.5 py-0.5 rounded text-slate-400">1-9,0</kbd>
           <span className="ml-1">to switch tabs</span>
         </div>
       </div>

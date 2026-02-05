@@ -115,6 +115,7 @@ export enum AppTab {
   TABLE = 'table',
   AI = 'ai',
   API_LOGS = 'api-logs',
+  TRANSLATE = 'translate',
   SETTINGS = 'settings'
 }
 
