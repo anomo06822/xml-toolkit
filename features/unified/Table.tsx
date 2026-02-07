@@ -3,13 +3,14 @@
 // ============================================
 
 import React, { useState, useCallback, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { Button } from '../../components/Button';
 import { MarkdownPreview } from '../../components/common';
 import { formatShortcut, isPrimaryShortcut } from '../../services';
 import { 
   Table2, Plus, Trash2, Copy, Check, Download,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
-  AlignLeft, AlignCenter, AlignRight, Eye, Code
+  AlignLeft, AlignCenter, AlignRight, Eye, Code, FileCode
 } from 'lucide-react';
 
 type Alignment = 'left' | 'center' | 'right';
@@ -20,8 +21,22 @@ interface TableData {
   rows: string[][];
 }
 
+interface ParsedTableInput {
+  data: TableData;
+  source: 'markdown' | 'excel';
+}
+
+const escapeHtml = (value: string): string => {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
 // Convert table data to markdown
-const tableToMarkdown = (data: TableData): string => {
+export const tableToMarkdown = (data: TableData): string => {
   if (data.headers.length === 0) return '';
   
   const { headers, alignments, rows } = data;
@@ -53,9 +68,36 @@ const tableToMarkdown = (data: TableData): string => {
   return [headerRow, separatorRow, ...dataRows].join('\n');
 };
 
+// Convert table data to HTML table
+export const tableToHtml = (data: TableData): string => {
+  if (data.headers.length === 0) return '<table></table>';
+
+  const headerRow = data.headers
+    .map((header, index) => `<th style="text-align: ${data.alignments[index] ?? 'left'};">${escapeHtml(header)}</th>`)
+    .join('');
+
+  const bodyRows = data.rows
+    .map(row => {
+      const cells = data.headers
+        .map((_, index) => `<td style="text-align: ${data.alignments[index] ?? 'left'};">${escapeHtml(row[index] || '')}</td>`)
+        .join('');
+      return `<tr>${cells}</tr>`;
+    })
+    .join('\n');
+
+  return `<table>
+  <thead>
+    <tr>${headerRow}</tr>
+  </thead>
+  <tbody>
+    ${bodyRows}
+  </tbody>
+</table>`;
+};
+
 // Parse markdown to table data
-const markdownToTable = (md: string): TableData | null => {
-  const lines = md.trim().split('\n').filter(l => l.trim());
+export const markdownToTable = (md: string): TableData | null => {
+  const lines = md.trim().split(/\r?\n/).filter(l => l.trim());
   if (lines.length < 2) return null;
   
   const parseRow = (line: string): string[] => {
@@ -66,19 +108,174 @@ const markdownToTable = (md: string): TableData | null => {
       .map(cell => cell.trim());
   };
   
+  if (!lines[0].includes('|') && !lines[1].includes('|')) return null;
+
   const headers = parseRow(lines[0]);
+  if (headers.length === 0) return null;
   
   // Parse separator for alignment
   const sepLine = lines[1];
-  const alignments: Alignment[] = parseRow(sepLine).map(cell => {
+  const sepCells = parseRow(sepLine);
+  const separatorPattern = /^:?-{3,}:?$/;
+  if (sepCells.length === 0 || !sepCells.every(cell => separatorPattern.test(cell.trim()))) {
+    return null;
+  }
+
+  const alignments: Alignment[] = sepCells.map(cell => {
     const trimmed = cell.trim();
     if (trimmed.startsWith(':') && trimmed.endsWith(':')) return 'center';
     if (trimmed.endsWith(':')) return 'right';
     return 'left';
   });
   
-  const rows = lines.slice(2).map(parseRow);
+  const rows = lines.slice(2).map(parseRow).map(row => {
+    if (row.length >= headers.length) return row.slice(0, headers.length);
+    return [...row, ...new Array(headers.length - row.length).fill('')];
+  });
   
+  return {
+    headers,
+    alignments: [...alignments, ...new Array(Math.max(0, headers.length - alignments.length)).fill('left')],
+    rows
+  };
+};
+
+// Parse Excel copied table text (TSV) to table data
+export const excelToTable = (input: string): TableData | null => {
+  if (!input.includes('\t')) return null;
+
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentCell = '';
+  let inQuotes = false;
+  const text = input.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (inQuotes) {
+      if (char === '"' && nextChar === '"') {
+        currentCell += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        currentCell += char;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inQuotes = true;
+      continue;
+    }
+
+    if (char === '\t') {
+      currentRow.push(currentCell.trim());
+      currentCell = '';
+      continue;
+    }
+
+    if (char === '\n') {
+      currentRow.push(currentCell.trim());
+      rows.push(currentRow);
+      currentRow = [];
+      currentCell = '';
+      continue;
+    }
+
+    currentCell += char;
+  }
+
+  if (currentCell.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentCell.trim());
+    rows.push(currentRow);
+  }
+
+  const validRows = rows.filter(row => row.some(cell => cell.length > 0));
+  if (validRows.length < 2) return null;
+
+  const headers = validRows[0];
+  if (headers.length === 0) return null;
+
+  const normalizedRows = validRows.slice(1).map(row => {
+    if (row.length >= headers.length) return row.slice(0, headers.length);
+    return [...row, ...new Array(headers.length - row.length).fill('')];
+  });
+
+  return {
+    headers,
+    alignments: new Array(headers.length).fill('left'),
+    rows: normalizedRows
+  };
+};
+
+export const parseTableInput = (input: string): ParsedTableInput | null => {
+  const parsedMarkdown = markdownToTable(input);
+  if (parsedMarkdown) {
+    return { data: parsedMarkdown, source: 'markdown' };
+  }
+
+  const parsedExcel = excelToTable(input);
+  if (parsedExcel) {
+    return { data: parsedExcel, source: 'excel' };
+  }
+
+  return null;
+};
+
+// Parse HTML table structure to table data
+export const htmlToTable = (html: string): TableData | null => {
+  if (!html.trim().includes('<')) return null;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const table = doc.querySelector('table');
+  if (!table) return null;
+
+  const getCells = (row: Element): Element[] => Array.from(row.querySelectorAll('th, td'));
+  const getText = (cell: Element): string => (cell.textContent || '').trim();
+  const getAlign = (cell: Element | undefined): Alignment => {
+    if (!cell) return 'left';
+    const alignAttr = (cell.getAttribute('align') || '').toLowerCase();
+    const styleAlign = ((cell as HTMLElement).style?.textAlign || '').toLowerCase();
+    const align = alignAttr || styleAlign;
+    if (align === 'center') return 'center';
+    if (align === 'right') return 'right';
+    return 'left';
+  };
+
+  let headerCells: Element[] = [];
+  let rowElements: Element[] = [];
+
+  const theadRow = table.querySelector('thead tr');
+  if (theadRow) {
+    headerCells = getCells(theadRow);
+    rowElements = Array.from(table.querySelectorAll('tbody tr'));
+    if (rowElements.length === 0) {
+      rowElements = Array.from(table.querySelectorAll('tr')).filter(row => !row.closest('thead'));
+    }
+  } else {
+    const allRows = Array.from(table.querySelectorAll('tr'));
+    if (allRows.length === 0) return null;
+    headerCells = getCells(allRows[0]);
+    rowElements = allRows.slice(1);
+  }
+
+  const headers = headerCells.map(getText);
+  if (headers.length === 0) return null;
+
+  const alignments: Alignment[] = headers.map((_, index) => getAlign(headerCells[index]));
+
+  const rows = rowElements
+    .map(row => getCells(row).map(getText))
+    .filter(row => row.some(cell => cell.length > 0))
+    .map(row => {
+      if (row.length >= headers.length) return row.slice(0, headers.length);
+      return [...row, ...new Array(headers.length - row.length).fill('')];
+    });
+
   return { headers, alignments, rows };
 };
 
@@ -94,9 +291,10 @@ export const UnifiedTable: React.FC = () => {
     ]
   });
   
-  const [viewMode, setViewMode] = useState<'edit' | 'markdown' | 'preview'>('edit');
+  const [viewMode, setViewMode] = useState<'edit' | 'markdown' | 'html' | 'preview'>('edit');
   const [copied, setCopied] = useState(false);
   const [markdownInput, setMarkdownInput] = useState('');
+  const [htmlInput, setHtmlInput] = useState('');
 
   React.useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -125,6 +323,11 @@ export const UnifiedTable: React.FC = () => {
   
   // Generate markdown from current table
   const markdown = useMemo(() => tableToMarkdown(tableData), [tableData]);
+  const generatedHtml = useMemo(() => tableToHtml(tableData), [tableData]);
+  const sanitizedHtmlPreview = useMemo(
+    () => DOMPurify.sanitize(htmlInput, { USE_PROFILES: { html: true } }),
+    [htmlInput]
+  );
   
   // Cell update handler
   const updateCell = useCallback((rowIndex: number, colIndex: number, value: string) => {
@@ -240,11 +443,26 @@ export const UnifiedTable: React.FC = () => {
   }, [markdown]);
   
   // Parse markdown input
-  const handleMarkdownChange = useCallback((md: string) => {
-    setMarkdownInput(md);
-    const parsed = markdownToTable(md);
+  const handleMarkdownChange = useCallback((input: string) => {
+    setMarkdownInput(input);
+    const parsed = parseTableInput(input);
+    if (!parsed) return;
+
+    setTableData(parsed.data);
+
+    // If content came from Excel/TSV paste, auto-convert editor content to Markdown table.
+    if (parsed.source === 'excel') {
+      setMarkdownInput(tableToMarkdown(parsed.data));
+    }
+  }, []);
+
+  // Parse HTML input and sync table editor when the input includes a table structure
+  const handleHtmlChange = useCallback((input: string) => {
+    setHtmlInput(input);
+    const parsed = htmlToTable(input);
     if (parsed) {
       setTableData(parsed);
+      setMarkdownInput(tableToMarkdown(parsed));
     }
   }, []);
   
@@ -293,6 +511,20 @@ export const UnifiedTable: React.FC = () => {
             >
               <Code size={14} className="inline mr-1" />
               Markdown
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('html');
+                setHtmlInput(generatedHtml);
+              }}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${
+                viewMode === 'html'
+                  ? 'bg-primary text-white'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <FileCode size={14} className="inline mr-1" />
+              HTML
             </button>
             <button
               onClick={() => setViewMode('preview')}
@@ -455,7 +687,7 @@ export const UnifiedTable: React.FC = () => {
               spellCheck={false}
             />
             <p className="text-xs text-slate-500">
-              Edit the markdown directly. Changes will update the table editor.
+              Paste Markdown table or Excel/TSV content. Changes will update the table editor.
             </p>
           </div>
         )}
@@ -467,6 +699,38 @@ export const UnifiedTable: React.FC = () => {
               markdown={markdown}
               className="flex-1 overflow-auto"
             />
+          </div>
+        )}
+
+        {viewMode === 'html' && (
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2 min-h-0">
+              <label className="text-sm font-medium text-slate-400">HTML Source</label>
+              <textarea
+                value={htmlInput}
+                onChange={e => handleHtmlChange(e.target.value)}
+                className="flex-1 bg-surface border border-slate-700 rounded-lg p-4 font-mono text-sm text-slate-300 outline-none focus:border-primary resize-none"
+                placeholder="Paste or edit HTML structure here..."
+                spellCheck={false}
+              />
+              <p className="text-xs text-slate-500">
+                Input HTML to preview render effect. If a table is detected, it syncs to the editor.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 min-h-0">
+              <label className="text-sm font-medium text-slate-400">HTML Preview</label>
+              <div className="flex-1 bg-surface border border-slate-700 rounded-lg p-4 overflow-auto">
+                {!htmlInput.trim() ? (
+                  <p className="text-slate-500">No HTML content to preview.</p>
+                ) : (
+                  <div
+                    data-testid="html-preview"
+                    className="markdown-body markdown-preview"
+                    dangerouslySetInnerHTML={{ __html: sanitizedHtmlPreview }}
+                  />
+                )}
+              </div>
+            </div>
           </div>
         )}
         
