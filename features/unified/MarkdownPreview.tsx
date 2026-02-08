@@ -2,9 +2,10 @@
 // Unified Markdown Preview - README-style rendering
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CodeEditor, TemplateManager, MarkdownPreview } from '../../components/common';
 import { Button } from '../../components/Button';
+import { formatShortcut, isPrimaryShortcut, setAiContextByFormat } from '../../services';
 import { FileText, Copy, Check, Download, Columns, Maximize2 } from 'lucide-react';
 
 const defaultMarkdown = `# DataToolkit
@@ -43,9 +44,30 @@ npm run dev
 `;
 
 export const UnifiedMarkdownPreview: React.FC = () => {
-  const [input, setInput] = useState<string>(defaultMarkdown);
+  const [input, setInput] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState<'split' | 'preview'>('split');
+
+  useEffect(() => {
+    if (!input.trim()) return;
+    setAiContextByFormat('markdown', input, 'markdown-preview:input');
+  }, [input]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isPrimaryShortcut(e) || !e.shiftKey) return;
+      if (e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        handleCopy();
+      }
+      if (e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        handleDownload();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
 
   const handleCopy = () => {
     navigator.clipboard.writeText(input);
@@ -109,10 +131,10 @@ export const UnifiedMarkdownPreview: React.FC = () => {
             onClick={handleCopy}
             icon={copied ? <Check size={16} /> : <Copy size={16} />}
           >
-            {copied ? 'Copied!' : 'Copy'}
+            {copied ? 'Copied!' : `Copy (${formatShortcut('C', true)})`}
           </Button>
           <Button variant="secondary" onClick={handleDownload} icon={<Download size={16} />}>
-            Download
+            Download ({formatShortcut('D', true)})
           </Button>
         </div>
       </div>
@@ -136,7 +158,7 @@ export const UnifiedMarkdownPreview: React.FC = () => {
                 onChange={setInput}
                 format="markdown"
                 showLineNumbers
-                placeholder="Paste your README.md here..."
+                placeholder={defaultMarkdown}
               />
             </div>
           </div>

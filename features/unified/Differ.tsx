@@ -7,8 +7,19 @@ import React, { useState, useEffect } from 'react';
 import { DataFormat, DiffResult as DiffResultType, computeDiff, detectFormat, sort } from '../../core';
 import { CodeEditor } from '../../components/common';
 import { Button } from '../../components/Button';
-import { getGeminiToken } from '../../services';
+import { addGeminiApiLog, formatShortcut, getGeminiToken, getGeminiModel, isPrimaryShortcut, setAiContextByFormat, toTokenPreview } from '../../services';
 import { GitCompare, Settings2, ArrowDownAZ, Copy, Check, Sparkles, Loader2, FileCode, Braces, FileText } from 'lucide-react';
+
+const SAMPLE_DIFF_LEFT = `{
+  "name": "old",
+  "value": 1
+}`;
+
+const SAMPLE_DIFF_RIGHT = `{
+  "name": "new",
+  "value": 2,
+  "extra": true
+}`;
 
 // Format badge component
 const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ format, confidence }) => {
@@ -36,8 +47,8 @@ const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ for
 };
 
 export const UnifiedDiffer: React.FC = () => {
-  const [leftContent, setLeftContent] = useState<string>('{\n  "name": "old",\n  "value": 1\n}');
-  const [rightContent, setRightContent] = useState<string>('{\n  "name": "new",\n  "value": 2,\n  "extra": true\n}');
+  const [leftContent, setLeftContent] = useState<string>('');
+  const [rightContent, setRightContent] = useState<string>('');
   const [detectedFormat, setDetectedFormat] = useState<{ format: DataFormat; confidence: number }>({ format: 'json', confidence: 1 });
   const [diffResult, setDiffResult] = useState<DiffResultType | null>(null);
   const [options, setOptions] = useState({
@@ -56,8 +67,31 @@ export const UnifiedDiffer: React.FC = () => {
     if (leftContent.trim()) {
       const detected = detectFormat(leftContent);
       setDetectedFormat({ format: detected.format, confidence: detected.confidence });
+      setAiContextByFormat(detected.format, leftContent, 'differ:left');
     }
   }, [leftContent]);
+
+  useEffect(() => {
+    if (rightContent.trim()) {
+      setAiContextByFormat(detectedFormat.format, rightContent, 'differ:right');
+    }
+  }, [rightContent, detectedFormat.format]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isPrimaryShortcut(e)) return;
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        void handleCompare();
+      }
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        handleNormalizeInputs();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
   
   const generateAiSummary = async (diff: DiffResultType) => {
     const apiKey = getGeminiToken();
@@ -72,6 +106,8 @@ export const UnifiedDiffer: React.FC = () => {
     try {
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey });
+      const model = getGeminiModel();
+      const tokenPreview = toTokenPreview(apiKey);
       
       // Build diff summary for AI
       const addedLines = diff.lines.filter(l => l.type === 'added').map(l => `+ ${l.content}`).join('\n');
@@ -94,14 +130,34 @@ ${removedLines || '(none)'}
 
 Please provide a clear, technical summary of the changes:`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+      const requestBody = {
+        model,
         contents: prompt
+      };
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt
+      });
+      addGeminiApiLog({
+        source: 'diff-summary',
+        model,
+        tokenPreview,
+        requestBody: JSON.stringify(requestBody, null, 2),
+        responseBody: JSON.stringify({ text: response.text || '' }, null, 2),
+        success: true
       });
       
       setAiSummaryText(response.text || 'Unable to generate summary.');
     } catch (error: any) {
       console.error('AI Summary error:', error);
+      addGeminiApiLog({
+        source: 'diff-summary',
+        model: getGeminiModel(),
+        tokenPreview: toTokenPreview(getGeminiToken()),
+        requestBody: JSON.stringify({ format: detectedFormat.format }, null, 2),
+        error: error?.message || 'Unknown error',
+        success: false
+      });
       setAiSummaryText(`⚠️ Error generating summary: ${error.message}`);
     } finally {
       setIsLoadingSummary(false);
@@ -187,10 +243,10 @@ Please provide a clear, technical summary of the changes:`;
         
         <div className="flex gap-2">
           <Button variant="secondary" onClick={handleNormalizeInputs} icon={<ArrowDownAZ size={16} />}>
-            Normalize
+            Normalize <span className="ml-1 opacity-70">({formatShortcut('Enter', true)})</span>
           </Button>
           <Button onClick={handleCompare} icon={<GitCompare size={16} />}>
-            Compare
+            Compare <span className="ml-1 opacity-70">({formatShortcut('Enter')})</span>
           </Button>
         </div>
       </div>
@@ -254,7 +310,7 @@ Please provide a clear, technical summary of the changes:`;
                 value={leftContent}
                 onChange={setLeftContent}
                 format={detectedFormat.format}
-                placeholder="Paste source content..."
+                placeholder={SAMPLE_DIFF_LEFT}
               />
             </div>
           </div>
@@ -266,7 +322,7 @@ Please provide a clear, technical summary of the changes:`;
                 value={rightContent}
                 onChange={setRightContent}
                 format={detectedFormat.format}
-                placeholder="Paste target content..."
+                placeholder={SAMPLE_DIFF_RIGHT}
               />
             </div>
           </div>

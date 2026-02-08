@@ -11,6 +11,8 @@ import {
   UnifiedMarkdownPreview
 } from './features/unified';
 import { GeminiAssistant } from './features/GeminiAssistant';
+import { GeminiApiLogs } from './features/GeminiApiLogs';
+import { TranslatePage } from './features/Translate';
 import { SettingsPage } from './features/Settings';
 
 const App: React.FC = () => {
@@ -29,6 +31,8 @@ const App: React.FC = () => {
           '6': AppTab.MARKDOWN,
           '7': AppTab.TABLE,
           '8': AppTab.AI,
+          '9': AppTab.API_LOGS,
+          '0': AppTab.TRANSLATE,
         };
         
         if (tabMap[e.key]) {
@@ -60,6 +64,10 @@ const App: React.FC = () => {
         return <UnifiedTable />;
       case AppTab.AI:
         return <GeminiAssistant />;
+      case AppTab.API_LOGS:
+        return <GeminiApiLogs />;
+      case AppTab.TRANSLATE:
+        return <TranslatePage />;
       case AppTab.SETTINGS:
         return <SettingsPage />;
       default:
@@ -77,6 +85,8 @@ const App: React.FC = () => {
       [AppTab.MARKDOWN]: 'Markdown Preview',
       [AppTab.TABLE]: 'Table Editor',
       [AppTab.AI]: 'AI Assistant',
+      [AppTab.API_LOGS]: 'Gemini API Logs',
+      [AppTab.TRANSLATE]: 'Translate',
       [AppTab.SETTINGS]: 'Settings',
     };
     return titles[activeTab];

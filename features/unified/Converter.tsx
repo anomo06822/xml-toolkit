@@ -4,13 +4,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { DataFormat, convert, detectFormat, format } from '../../core';
-import { addToHistory } from '../../services';
+import { addToHistory, formatShortcut, isPrimaryShortcut, setAiContextByFormat } from '../../services';
 import { FormatSelector, CodeEditor, TemplateManager } from '../../components/common';
 import { Button } from '../../components/Button';
 import { ArrowRight, ArrowLeft, ArrowLeftRight, Copy, Check, Download, RefreshCw } from 'lucide-react';
 
+const SAMPLE_CONVERTER_INPUT = `<root>
+  <item id="1">Hello</item>
+  <item id="2">World</item>
+</root>`;
+
 export const UnifiedConverter: React.FC = () => {
-  const [input, setInput] = useState<string>('<root>\n  <item id="1">Hello</item>\n  <item id="2">World</item>\n</root>');
+  const [input, setInput] = useState<string>('');
   const [output, setOutput] = useState<string>('');
   const [fromFormat, setFromFormat] = useState<DataFormat>('xml');
   const [toFormat, setToFormat] = useState<DataFormat>('json');
@@ -30,6 +35,28 @@ export const UnifiedConverter: React.FC = () => {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!input.trim()) return;
+    const detected = detectFormat(input);
+    setAiContextByFormat(detected.format, input, 'converter:input');
+  }, [input]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isPrimaryShortcut(e)) return;
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleConvertForward();
+      }
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        handleConvertBackward();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
   
   const handleConvertForward = () => {
     setError(null);
@@ -39,6 +66,7 @@ export const UnifiedConverter: React.FC = () => {
     if (result.success && result.data) {
       setOutput(result.data);
       addToHistory({ content: result.data, format: toFormat, operation: 'convert' });
+      setAiContextByFormat(toFormat, result.data, 'converter:output');
     } else {
       setError(result.error || 'Conversion failed');
       setOutput('');
@@ -58,6 +86,7 @@ export const UnifiedConverter: React.FC = () => {
     if (result.success && result.data) {
       setInput(result.data);
       addToHistory({ content: result.data, format: fromFormat, operation: 'convert' });
+      setAiContextByFormat(fromFormat, result.data, 'converter:reverse-output');
     } else {
       setError(result.error || 'Reverse conversion failed');
     }
@@ -103,6 +132,7 @@ export const UnifiedConverter: React.FC = () => {
   const handleLoadTemplate = (content: string, format: DataFormat) => {
     setInput(content);
     setFromFormat(format);
+    setAiContextByFormat(format, content, 'converter:template');
   };
   
   return (
@@ -137,7 +167,7 @@ export const UnifiedConverter: React.FC = () => {
             className="gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_18px_rgba(59,130,246,0.32)] hover:from-blue-400 hover:to-blue-500"
           >
             <ArrowRight size={14} />
-            <span>Convert</span>
+            <span>Convert ({formatShortcut('Enter')})</span>
             <ArrowRight size={14} />
           </Button>
           <Button
@@ -147,7 +177,7 @@ export const UnifiedConverter: React.FC = () => {
             className="gap-2 rounded-lg border border-slate-600 bg-slate-900/20 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-slate-500 hover:bg-slate-800/30"
           >
             <ArrowLeft size={14} />
-            <span>Convert</span>
+            <span>Convert ({formatShortcut('Enter', true)})</span>
             <ArrowLeft size={14} />
           </Button>
         </div>
@@ -197,7 +227,7 @@ export const UnifiedConverter: React.FC = () => {
               onChange={setInput}
               format={fromFormat}
               showLineNumbers
-              placeholder="Paste content to convert..."
+              placeholder={SAMPLE_CONVERTER_INPUT}
             />
           </div>
         </div>

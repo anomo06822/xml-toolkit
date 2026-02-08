@@ -6,12 +6,20 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { DataFormat, TreeNode, toTree, detectFormat } from '../../core';
 import { CodeEditor, TemplateManager } from '../../components/common';
+import { formatShortcut, isPrimaryShortcut, isMacPlatform, setAiContextByFormat } from '../../services';
 import { 
   ChevronRight, ChevronDown, Tag, Type, Braces, Hash,
   Network, List as ListIcon, Maximize2, Minimize2,
   ZoomIn, ZoomOut, Move, RotateCcw, Search, X,
   FileCode, FileText
 } from 'lucide-react';
+
+const SAMPLE_VISUALIZER_INPUT = `{
+  "users": [
+    {"name": "Alice", "age": 30},
+    {"name": "Bob", "age": 25}
+  ]
+}`;
 
 // Format badge component
 const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ format, confidence }) => {
@@ -238,7 +246,7 @@ const MapNodeView: React.FC<MapNodeViewProps> = ({ node, defaultOpen, searchQuer
 // ============================================
 
 export const UnifiedVisualizer: React.FC = () => {
-  const [input, setInput] = useState<string>('{\n  "users": [\n    {"name": "Alice", "age": 30},\n    {"name": "Bob", "age": 25}\n  ]\n}');
+  const [input, setInput] = useState<string>('');
   const [detectedFormat, setDetectedFormat] = useState<{ format: DataFormat; confidence: number }>({ format: 'json', confidence: 1 });
   const [tree, setTree] = useState<TreeNode | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -258,8 +266,30 @@ export const UnifiedVisualizer: React.FC = () => {
     if (input.trim()) {
       const detected = detectFormat(input);
       setDetectedFormat({ format: detected.format, confidence: detected.confidence });
+      setAiContextByFormat(detected.format, input, 'visualizer:input');
     }
   }, [input]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isPrimaryShortcut(e) || !e.shiftKey) return;
+      const key = e.key.toLowerCase();
+      if (key === 'e') {
+        e.preventDefault();
+        toggleExpandAll(true);
+      }
+      if (key === 'w') {
+        e.preventDefault();
+        toggleExpandAll(false);
+      }
+      if (key === 'r' && viewMode === 'map') {
+        e.preventDefault();
+        setPosition({ x: 0, y: 0 });
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [viewMode]);
   
   // Parse to tree
   useEffect(() => {
@@ -341,7 +371,7 @@ export const UnifiedVisualizer: React.FC = () => {
             value={input}
             onChange={setInput}
             format={detectedFormat.format}
-            placeholder="Paste XML, JSON, or Markdown to visualize..."
+            placeholder={SAMPLE_VISUALIZER_INPUT}
           />
         </div>
       </div>
@@ -392,14 +422,14 @@ export const UnifiedVisualizer: React.FC = () => {
             <button
               onClick={() => toggleExpandAll(true)}
               className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded"
-              title="Expand All"
+              title={`Expand All (${formatShortcut('E', true)})`}
             >
               <Maximize2 size={16} />
             </button>
             <button
               onClick={() => toggleExpandAll(false)}
               className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded"
-              title="Collapse All"
+              title={`Collapse All (${formatShortcut('W', true)})`}
             >
               <Minimize2 size={16} />
             </button>
@@ -412,7 +442,7 @@ export const UnifiedVisualizer: React.FC = () => {
                 onClick={() => setPosition({ x: 0, y: 0 })}
                 className="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800 px-2 py-1 rounded border border-slate-700"
               >
-                <RotateCcw size={12} /> Reset
+                <RotateCcw size={12} /> Reset ({formatShortcut('R', true)})
               </button>
               <div className="flex items-center gap-1 bg-slate-900 rounded-md px-2 py-1 border border-slate-700">
                 <ZoomOut
@@ -480,7 +510,7 @@ export const UnifiedVisualizer: React.FC = () => {
               
               <div className="absolute bottom-4 right-4 bg-slate-900/80 backdrop-blur text-xs text-slate-400 px-3 py-1.5 rounded-full border border-slate-700 pointer-events-none flex items-center gap-2">
                 <Move size={12} />
-                Drag to pan • Scroll to zoom
+                Drag to pan • {isMacPlatform() ? '⌘' : 'Ctrl'}+Scroll to zoom
               </div>
             </div>
           )}

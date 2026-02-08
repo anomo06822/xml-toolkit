@@ -6,10 +6,16 @@
 import React, { useState, useEffect } from 'react';
 import { DataFormat, SortOptions } from '../../core';
 import { sort, format, detectFormat } from '../../core';
-import { addToHistory } from '../../services';
+import { addToHistory, formatShortcut, isPrimaryShortcut, setAiContextByFormat } from '../../services';
 import { CodeEditor, TemplateManager } from '../../components/common';
 import { Button } from '../../components/Button';
 import { ArrowDownAZ, ArrowUpZA, Copy, Check, Settings2, FileCode, Braces, FileText } from 'lucide-react';
+
+const SAMPLE_SORTER_INPUT = `<root>
+  <zebra>Value</zebra>
+  <apple>Value</apple>
+  <mango>Value</mango>
+</root>`;
 
 // Format badge component
 const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ format, confidence }) => {
@@ -37,7 +43,7 @@ const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ for
 };
 
 export const UnifiedSorter: React.FC = () => {
-  const [input, setInput] = useState<string>('<root>\n  <zebra>Value</zebra>\n  <apple>Value</apple>\n  <mango>Value</mango>\n</root>');
+  const [input, setInput] = useState<string>('');
   const [output, setOutput] = useState<string>('');
   const [detectedFormat, setDetectedFormat] = useState<{ format: DataFormat; confidence: number }>({ format: 'xml', confidence: 1 });
   const [sortOptions, setSortOptions] = useState<Partial<SortOptions>>({
@@ -53,8 +59,25 @@ export const UnifiedSorter: React.FC = () => {
     if (input.trim()) {
       const detected = detectFormat(input);
       setDetectedFormat({ format: detected.format, confidence: detected.confidence });
+      setAiContextByFormat(detected.format, input, 'sorter:input');
     }
   }, [input]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isPrimaryShortcut(e)) return;
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSort('asc');
+      }
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        handleSort('desc');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
   
   const handleSort = (direction: 'asc' | 'desc') => {
     const options = { ...sortOptions, direction };
@@ -67,6 +90,7 @@ export const UnifiedSorter: React.FC = () => {
       
       setOutput(finalOutput);
       addToHistory({ content: finalOutput, format: detectedFormat.format, operation: 'sort' });
+      setAiContextByFormat(detectedFormat.format, finalOutput, 'sorter:output');
     } else {
       setOutput(`Error: ${sortResult.error}`);
     }
@@ -115,10 +139,10 @@ export const UnifiedSorter: React.FC = () => {
         
         <div className="flex gap-2">
           <Button onClick={() => handleSort('asc')} icon={<ArrowDownAZ size={16} />}>
-            Sort A→Z
+            Sort A→Z <span className="ml-1 opacity-70">({formatShortcut('Enter')})</span>
           </Button>
           <Button variant="secondary" onClick={() => handleSort('desc')} icon={<ArrowUpZA size={16} />}>
-            Sort Z→A
+            Sort Z→A <span className="ml-1 opacity-70">({formatShortcut('Enter', true)})</span>
           </Button>
         </div>
       </div>
@@ -167,7 +191,7 @@ export const UnifiedSorter: React.FC = () => {
               onChange={setInput}
               format={detectedFormat.format}
               showLineNumbers
-              placeholder="Paste XML, JSON, or Markdown to sort..."
+              placeholder={SAMPLE_SORTER_INPUT}
             />
           </div>
         </div>

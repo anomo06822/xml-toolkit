@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { DataFormat } from '../../core';
 import { format, minify, detectFormat } from '../../core';
-import { addToHistory } from '../../services';
+import { addToHistory, formatShortcut, isPrimaryShortcut, setAiContextByFormat } from '../../services';
 import { CodeEditor, TemplateManager } from '../../components/common';
 import { Button } from '../../components/Button';
 import { 
@@ -14,6 +14,11 @@ import {
   AlertCircle, CheckCircle, Wand2, Download,
   FileCode, Braces, FileText
 } from 'lucide-react';
+
+const SAMPLE_FORMATTER_INPUT = `{
+  "hello": "world",
+  "items": [1, 2, 3]
+}`;
 
 // Format badge component
 const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ format, confidence }) => {
@@ -41,7 +46,7 @@ const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ for
 };
 
 export const UnifiedFormatter: React.FC = () => {
-  const [input, setInput] = useState<string>('{\n  "hello": "world",\n  "items": [1, 2, 3]\n}');
+  const [input, setInput] = useState<string>('');
   const [output, setOutput] = useState<string>('');
   const [detectedFormat, setDetectedFormat] = useState<{ format: DataFormat; confidence: number }>({ format: 'json', confidence: 1 });
   const [indentSize, setIndentSize] = useState<number>(2);
@@ -54,16 +59,34 @@ export const UnifiedFormatter: React.FC = () => {
       const detected = detectFormat(input);
       setDetectedFormat({ format: detected.format, confidence: detected.confidence });
       setValidation({ valid: detected.isValid, error: detected.error });
+      setAiContextByFormat(detected.format, input, 'formatter:input');
     } else {
       setValidation(null);
     }
   }, [input]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isPrimaryShortcut(e)) return;
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleFormat();
+      }
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        handleMinify();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
   
   const handleFormat = () => {
     const result = format(input, detectedFormat.format, { indentSize });
     if (result.success && result.data) {
       setOutput(result.data);
       addToHistory({ content: result.data, format: detectedFormat.format, operation: 'format' });
+      setAiContextByFormat(detectedFormat.format, result.data, 'formatter:output');
     } else {
       setOutput(`Error: ${result.error}`);
     }
@@ -74,6 +97,7 @@ export const UnifiedFormatter: React.FC = () => {
     if (result.success && result.data) {
       setOutput(result.data);
       addToHistory({ content: result.data, format: detectedFormat.format, operation: 'minify' });
+      setAiContextByFormat(detectedFormat.format, result.data, 'formatter:output');
     } else {
       setOutput(`Error: ${result.error}`);
     }
@@ -141,10 +165,10 @@ export const UnifiedFormatter: React.FC = () => {
         
         <div className="flex gap-2">
           <Button onClick={handleFormat} icon={<AlignLeft size={16} />}>
-            Format
+            Format <span className="ml-1 opacity-70">({formatShortcut('Enter')})</span>
           </Button>
           <Button variant="secondary" onClick={handleMinify} icon={<Minimize2 size={16} />}>
-            Minify
+            Minify <span className="ml-1 opacity-70">({formatShortcut('Enter', true)})</span>
           </Button>
         </div>
       </div>
@@ -200,7 +224,7 @@ export const UnifiedFormatter: React.FC = () => {
               onChange={setInput}
               format={detectedFormat.format}
               showLineNumbers
-              placeholder="Paste your XML, JSON, or Markdown here..."
+              placeholder={SAMPLE_FORMATTER_INPUT}
             />
           </div>
         </div>

@@ -9,6 +9,9 @@ const TEMPLATES_KEY = `${STORAGE_PREFIX}templates`;
 const WORKSPACES_KEY = `${STORAGE_PREFIX}workspaces`;
 const SETTINGS_KEY = `${STORAGE_PREFIX}settings`;
 const HISTORY_KEY = `${STORAGE_PREFIX}history`;
+const GEMINI_API_LOGS_KEY = `${STORAGE_PREFIX}gemini_api_logs`;
+const AI_CONTEXT_KEY = `${STORAGE_PREFIX}ai_context`;
+const GEMINI_UPLOAD_HISTORY_KEY = `${STORAGE_PREFIX}gemini_upload_history`;
 
 // ============================================
 // Templates Management
@@ -150,7 +153,30 @@ export interface AppSettings {
   fontSize: number;
   showLineNumbers: boolean;
   geminiToken: string;
+  geminiModel: GeminiModel;
 }
+
+export const GEMINI_MODEL_OPTIONS = [
+  { label: 'Gemini 3 Pro', value: 'gemini-3-pro' },
+  { label: 'Gemini 3 Flash', value: 'gemini-3-flash' },
+  { label: 'Gemini 2.5 Flash', value: 'gemini-2.5-flash' },
+  { label: 'Gemini 2.5 Flash-Lite', value: 'gemini-2.5-flash-lite' }
+] as const;
+
+export const GEMINI_MODELS = GEMINI_MODEL_OPTIONS.map((option) => option.value) as readonly string[];
+
+export type GeminiModel = typeof GEMINI_MODEL_OPTIONS[number]['value'];
+
+const DEFAULT_GEMINI_MODEL: GeminiModel = 'gemini-2.5-flash';
+
+const resolveGeminiModel = (model?: string): GeminiModel => {
+  if (!model) {
+    return DEFAULT_GEMINI_MODEL;
+  }
+  return GEMINI_MODELS.includes(model as GeminiModel)
+    ? (model as GeminiModel)
+    : DEFAULT_GEMINI_MODEL;
+};
 
 const defaultSettings: AppSettings = {
   theme: 'dark',
@@ -161,7 +187,8 @@ const defaultSettings: AppSettings = {
   autoFormat: false,
   fontSize: 14,
   showLineNumbers: true,
-  geminiToken: ''
+  geminiToken: '',
+  geminiModel: DEFAULT_GEMINI_MODEL
 };
 
 export const getSettings = (): AppSettings => {
@@ -194,6 +221,19 @@ export const getGeminiToken = (): string => {
 
   const env = (import.meta as any).env || {};
   return env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY || '';
+};
+
+export const getGeminiModel = (): GeminiModel => {
+  return resolveGeminiModel(getSettings().geminiModel);
+};
+
+export const toTokenPreview = (token: string): string => {
+  const normalized = token.trim();
+  if (!normalized) return '(missing)';
+  if (normalized.length <= 10) {
+    return `${normalized.slice(0, 2)}***${normalized.slice(-2)}`;
+  }
+  return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
 };
 
 // ============================================
@@ -241,6 +281,145 @@ export const addToHistory = (entry: Omit<HistoryEntry, 'id' | 'timestamp'>): His
 
 export const clearHistory = (): void => {
   localStorage.setItem(HISTORY_KEY, JSON.stringify([]));
+};
+
+// ============================================
+// Gemini API Logs
+// ============================================
+
+export interface GeminiApiLogEntry {
+  id: string;
+  timestamp: number;
+  source: 'assistant' | 'diff-summary';
+  model: GeminiModel;
+  tokenPreview: string;
+  requestBody: string;
+  responseBody?: string;
+  error?: string;
+  success: boolean;
+}
+
+const MAX_GEMINI_API_LOGS = 100;
+
+export const getGeminiApiLogs = (): GeminiApiLogEntry[] => {
+  try {
+    const data = localStorage.getItem(GEMINI_API_LOGS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error('Failed to load Gemini API logs:', e);
+    return [];
+  }
+};
+
+export const addGeminiApiLog = (
+  log: Omit<GeminiApiLogEntry, 'id' | 'timestamp'>
+): GeminiApiLogEntry => {
+  const logs = getGeminiApiLogs();
+  const newLog: GeminiApiLogEntry = {
+    ...log,
+    id: crypto.randomUUID(),
+    timestamp: Date.now()
+  };
+
+  logs.unshift(newLog);
+  if (logs.length > MAX_GEMINI_API_LOGS) {
+    logs.pop();
+  }
+
+  localStorage.setItem(GEMINI_API_LOGS_KEY, JSON.stringify(logs));
+  return newLog;
+};
+
+export const clearGeminiApiLogs = (): void => {
+  localStorage.setItem(GEMINI_API_LOGS_KEY, JSON.stringify([]));
+};
+
+// ============================================
+// AI Context
+// ============================================
+
+export interface AiContextState {
+  xml?: string;
+  json?: string;
+  markdown?: string;
+  text?: string;
+  source?: string;
+  updatedAt?: number;
+  meta?: Partial<Record<DataFormat | 'text', { source?: string; updatedAt?: number }>>;
+}
+
+const normalizeContextContent = (content: string): string => content.trim();
+
+export const getAiContext = (): AiContextState => {
+  try {
+    const data = localStorage.getItem(AI_CONTEXT_KEY);
+    return data ? JSON.parse(data) : {};
+  } catch (e) {
+    console.error('Failed to load AI context:', e);
+    return {};
+  }
+};
+
+export const setAiContextByFormat = (
+  format: DataFormat | 'text',
+  content: string,
+  source?: string
+): AiContextState => {
+  const current = getAiContext();
+  const normalizedContent = normalizeContextContent(content);
+  const updated: AiContextState = {
+    ...current,
+    [format]: normalizedContent,
+    source: source || current.source,
+    updatedAt: Date.now(),
+    meta: {
+      ...(current.meta || {}),
+      [format]: {
+        source: source || current.meta?.[format]?.source,
+        updatedAt: Date.now()
+      }
+    }
+  };
+  localStorage.setItem(AI_CONTEXT_KEY, JSON.stringify(updated));
+  return updated;
+};
+
+export interface GeminiUploadHistoryEntry {
+  id: string;
+  name: string;
+  format: DataFormat | 'text';
+  content: string;
+  uploadedAt: number;
+  source: string;
+}
+
+const MAX_GEMINI_UPLOAD_HISTORY = 10;
+
+export const getGeminiUploadHistory = (): GeminiUploadHistoryEntry[] => {
+  try {
+    const data = localStorage.getItem(GEMINI_UPLOAD_HISTORY_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error('Failed to load Gemini upload history:', e);
+    return [];
+  }
+};
+
+export const addGeminiUploadHistory = (
+  entry: Omit<GeminiUploadHistoryEntry, 'id' | 'uploadedAt'>
+): GeminiUploadHistoryEntry => {
+  const history = getGeminiUploadHistory();
+  const item: GeminiUploadHistoryEntry = {
+    ...entry,
+    id: crypto.randomUUID(),
+    uploadedAt: Date.now()
+  };
+  history.unshift(item);
+  if (history.length > MAX_GEMINI_UPLOAD_HISTORY) {
+    history.length = MAX_GEMINI_UPLOAD_HISTORY;
+  }
+  localStorage.setItem(GEMINI_UPLOAD_HISTORY_KEY, JSON.stringify(history));
+  return item;
 };
 
 // ============================================

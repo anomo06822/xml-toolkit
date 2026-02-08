@@ -3,7 +3,7 @@
 // ============================================
 
 import React, { useState, useEffect } from 'react';
-import { getSettings, updateSettings, resetSettings, AppSettings, exportAllData, importData } from '../services';
+import { getSettings, updateSettings, resetSettings, AppSettings, exportAllData, importData, GEMINI_MODEL_OPTIONS } from '../services';
 import { Button } from '../components/Button';
 import { FormatSelector } from '../components/common/FormatSelector';
 import { DataFormat } from '../core';
@@ -164,20 +164,42 @@ export const SettingsPage: React.FC = () => {
       <section className="bg-surface border border-slate-700 rounded-lg p-6 mb-6">
         <h2 className="text-lg font-semibold text-slate-200 mb-4">AI</h2>
 
-        <div className="flex justify-between items-start gap-4">
-          <div>
-            <label className="text-sm font-medium text-slate-300">Gemini Token</label>
-            <p className="text-xs text-slate-500">
-              Used for AI features. Stored only in your browser local storage.
-            </p>
+        <div className="space-y-4">
+          <div className="flex justify-between items-start gap-4">
+            <div>
+              <label className="text-sm font-medium text-slate-300">Gemini Token</label>
+              <p className="text-xs text-slate-500">
+                Used for AI features. Stored only in your browser local storage.
+              </p>
+            </div>
+            <input
+              type="password"
+              value={settings.geminiToken}
+              onChange={(e) => handleChange('geminiToken', e.target.value)}
+              placeholder="Paste Gemini API token"
+              className="w-80 max-w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none"
+            />
           </div>
-          <input
-            type="password"
-            value={settings.geminiToken}
-            onChange={(e) => handleChange('geminiToken', e.target.value)}
-            placeholder="Paste Gemini API token"
-            className="w-80 max-w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none"
-          />
+
+          <div className="flex justify-between items-center gap-4">
+            <div>
+              <label className="text-sm font-medium text-slate-300">Gemini Model</label>
+              <p className="text-xs text-slate-500">
+                Select which Gemini model is used by AI assistant and AI summary.
+              </p>
+            </div>
+            <select
+              value={settings.geminiModel}
+              onChange={(e) => handleChange('geminiModel', e.target.value as AppSettings['geminiModel'])}
+              className="w-80 max-w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200"
+            >
+              {GEMINI_MODEL_OPTIONS.map((model) => (
+                <option key={model.value} value={model.value}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </section>
       
