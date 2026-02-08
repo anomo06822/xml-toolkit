@@ -7,15 +7,33 @@ import { getSettings, updateSettings, resetSettings, AppSettings, exportAllData,
 import { Button } from '../components/Button';
 import { FormatSelector } from '../components/common/FormatSelector';
 import { DataFormat } from '../core';
-import { Settings, Download, Upload, RotateCcw, Check, Save } from 'lucide-react';
+import { Settings, Download, Upload, RotateCcw, Check, Save, Keyboard, Monitor } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
+  const isElectron = Boolean(window.electronAPI?.isElectron);
   const [settings, setSettings] = useState<AppSettings>(getSettings());
   const [saved, setSaved] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [shortcutStatus, setShortcutStatus] = useState<string | null>(null);
+  const [desktopStatus, setDesktopStatus] = useState<string>('not-detected');
   
   useEffect(() => {
-    setSettings(getSettings());
+    const localSettings = getSettings();
+    setSettings(localSettings);
+    if (window.electronAPI?.isElectron) {
+      void window.electronAPI.desktop.setWakeupShortcut(localSettings.globalWakeupShortcut);
+      window.electronAPI.desktop.getSettings()
+        .then((desktopSettings) => {
+          setSettings((prev) => ({
+            ...prev,
+            globalWakeupShortcut: desktopSettings.wakeupShortcut || prev.globalWakeupShortcut
+          }));
+          setDesktopStatus(desktopSettings.backendRunning ? 'backend-running' : 'backend-stopped');
+        })
+        .catch(() => {
+          setDesktopStatus('backend-unknown');
+        });
+    }
   }, []);
   
   const handleChange = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
@@ -23,8 +41,18 @@ export const SettingsPage: React.FC = () => {
     setSettings(updated);
   };
   
-  const handleSave = () => {
+  const handleSave = async () => {
     updateSettings(settings);
+
+    if (window.electronAPI?.isElectron) {
+      const result = await window.electronAPI.desktop.setWakeupShortcut(settings.globalWakeupShortcut);
+      if (result.ok) {
+        setShortcutStatus(`Applied: ${result.accelerator}`);
+      } else {
+        setShortcutStatus(`Failed: ${result.error}`);
+      }
+    }
+
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -202,6 +230,53 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Desktop Settings */}
+      {isElectron && (
+        <section className="bg-surface border border-slate-700 rounded-lg p-6 mb-6">
+          <h2 className="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+            <Monitor size={18} className="text-primary" />
+            Desktop
+          </h2>
+
+          <div className="space-y-4">
+            <div className="flex justify-between items-start gap-4">
+              <div>
+                <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                  <Keyboard size={14} />
+                  Global Wakeup Shortcut
+                </label>
+                <p className="text-xs text-slate-500">
+                  Example: CommandOrControl+Shift+Space. This shortcut wakes the app from anywhere.
+                </p>
+              </div>
+              <input
+                type="text"
+                value={settings.globalWakeupShortcut}
+                onChange={(e) => handleChange('globalWakeupShortcut', e.target.value)}
+                placeholder="CommandOrControl+Shift+Space"
+                className="w-80 max-w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none"
+              />
+            </div>
+
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-slate-500">
+                Desktop status: <span className="text-slate-300">{desktopStatus}</span>
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  void window.electronAPI?.desktop.wakeup();
+                }}
+              >
+                Test Wakeup
+              </Button>
+            </div>
+            {shortcutStatus && <p className="text-xs text-blue-300">{shortcutStatus}</p>}
+          </div>
+        </section>
+      )}
       
       {/* Data Management */}
       <section className="bg-surface border border-slate-700 rounded-lg p-6 mb-6">

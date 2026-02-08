@@ -4,3 +4,4 @@
 
 export * from './storage';
 export * from './hotkeys';
+export * from './aiClient';

@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { Button } from '../components/Button';
 import {
   formatShortcut,
+  generateGeminiContent,
   getGeminiModel,
-  getGeminiToken,
   getPersistentValue,
   isPrimaryShortcut,
   setPersistentValue
@@ -142,22 +141,16 @@ export const TranslatePage: React.FC = () => {
       setError('English optimization requires source language = English.');
       return;
     }
-    const apiKey = getGeminiToken();
-    if (!apiKey) {
-      setError('Gemini token is missing. Please set it in Settings > AI.');
-      return;
-    }
 
     setOptimizing(true);
     setError(null);
     try {
-      const ai = new GoogleGenAI({ apiKey });
       const model = getGeminiModel();
       const prompt = `${optimizePrompt.trim() || DEFAULT_OPTIMIZE_PROMPT}
 
 Text:
 ${input}`;
-      const result = await ai.models.generateContent({ model, contents: prompt });
+      const result = await generateGeminiContent({ model, contents: prompt });
       const improved = (result.text || '').trim();
       if (improved) {
         setOptimizedEnglish(improved);

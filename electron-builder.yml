@@ -1,0 +1,37 @@
+appId: com.self2026.datatoolkit
+productName: DataToolkit
+artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+directories:
+  output: release
+files:
+  - dist/**
+  - electron/**
+  - package.json
+extraResources:
+  - from: backend/publish
+    to: backend
+    filter:
+      - "**/*"
+mac:
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+dmg:
+  artifactName: "${productName}-${version}-${arch}.${ext}"
+win:
+  signAndEditExecutable: true
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
