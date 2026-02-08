@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { DataFormat, DiffResult as DiffResultType, computeDiff, detectFormat, sort } from '../../core';
 import { CodeEditor } from '../../components/common';
 import { Button } from '../../components/Button';
-import { addGeminiApiLog, formatShortcut, getGeminiToken, getGeminiModel, isPrimaryShortcut, setAiContextByFormat, toTokenPreview } from '../../services';
+import { addGeminiApiLog, formatShortcut, generateGeminiContent, getGeminiToken, getGeminiModel, isPrimaryShortcut, setAiContextByFormat, toTokenPreview } from '../../services';
 import { GitCompare, Settings2, ArrowDownAZ, Copy, Check, Sparkles, Loader2, FileCode, Braces, FileText } from 'lucide-react';
 
 const SAMPLE_DIFF_LEFT = `{
@@ -94,20 +94,11 @@ export const UnifiedDiffer: React.FC = () => {
   });
   
   const generateAiSummary = async (diff: DiffResultType) => {
-    const apiKey = getGeminiToken();
-    if (!apiKey) {
-      setAiSummaryText('⚠️ Gemini token not configured. Set it in Settings > AI, or use VITE_GEMINI_API_KEY.');
-      return;
-    }
-    
     setIsLoadingSummary(true);
     setAiSummaryText(null);
     
     try {
-      const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
       const model = getGeminiModel();
-      const tokenPreview = toTokenPreview(apiKey);
       
       // Build diff summary for AI
       const addedLines = diff.lines.filter(l => l.type === 'added').map(l => `+ ${l.content}`).join('\n');
@@ -134,16 +125,19 @@ Please provide a clear, technical summary of the changes:`;
         model,
         contents: prompt
       };
-      const response = await ai.models.generateContent({
+      const response = await generateGeminiContent({
         model,
         contents: prompt
       });
+      const tokenPreview = response.provider === 'electron-backend'
+        ? 'backend-managed'
+        : toTokenPreview(getGeminiToken());
       addGeminiApiLog({
         source: 'diff-summary',
         model,
         tokenPreview,
         requestBody: JSON.stringify(requestBody, null, 2),
-        responseBody: JSON.stringify({ text: response.text || '' }, null, 2),
+        responseBody: JSON.stringify({ provider: response.provider, text: response.text || '' }, null, 2),
         success: true
       });
       

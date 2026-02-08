@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "g1QgJMjEgSw=",
+  "success": true,
+  "projectFilePath": "/Users/jarvis/projects/self-2026/xml-toolkit/backend/DataToolkit.Api/DataToolkit.Api.csproj",
+  "expectedPackageFiles": [
+    "/Users/jarvis/.nuget/packages/microsoft.net.illink.tasks/10.0.2/microsoft.net.illink.tasks.10.0.2.nupkg.sha512",
+    "/Users/jarvis/.nuget/packages/microsoft.netcore.app.runtime.osx-arm64/10.0.2/microsoft.netcore.app.runtime.osx-arm64.10.0.2.nupkg.sha512",
+    "/Users/jarvis/.nuget/packages/microsoft.aspnetcore.app.runtime.osx-arm64/10.0.2/microsoft.aspnetcore.app.runtime.osx-arm64.10.0.2.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -154,6 +154,7 @@ export interface AppSettings {
   showLineNumbers: boolean;
   geminiToken: string;
   geminiModel: GeminiModel;
+  globalWakeupShortcut: string;
 }
 
 export const GEMINI_MODEL_OPTIONS = [
@@ -188,7 +189,8 @@ const defaultSettings: AppSettings = {
   fontSize: 14,
   showLineNumbers: true,
   geminiToken: '',
-  geminiModel: DEFAULT_GEMINI_MODEL
+  geminiModel: DEFAULT_GEMINI_MODEL,
+  globalWakeupShortcut: 'CommandOrControl+Shift+Space'
 };
 
 export const getSettings = (): AppSettings => {
