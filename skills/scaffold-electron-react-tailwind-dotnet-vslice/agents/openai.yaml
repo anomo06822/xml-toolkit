@@ -1,0 +1,4 @@
+interface:
+  display_name: "Electron + React + .NET Starter"
+  short_description: "Scaffold Electron React TS+Tailwind .NET 10 app"
+  default_prompt: "Use $scaffold-electron-react-tailwind-dotnet-vslice to scaffold a macOS-ready Electron + React (TypeScript + Tailwind CSS) + .NET 10 Vertical Slice starter with EF Core."
