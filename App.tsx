@@ -17,6 +17,7 @@ import { SettingsPage } from './features/Settings';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppTab>(AppTab.FORMATTER);
+  const [appVersion, setAppVersion] = useState<string>('');
 
   // Hotkey System
   useEffect(() => {
@@ -44,6 +45,17 @@ const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!window.electronAPI?.isElectron) return;
+    window.electronAPI.desktop.getSettings()
+      .then((desktop) => {
+        setAppVersion(desktop.appVersion || '');
+      })
+      .catch(() => {
+        setAppVersion('');
+      });
   }, []);
 
   const renderContent = () => {
@@ -100,6 +112,12 @@ const App: React.FC = () => {
         <header className="h-16 border-b border-slate-800 flex items-center justify-between px-8 bg-background/50 backdrop-blur-sm z-10">
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <span>DataToolkit</span>
+            {appVersion && (
+              <>
+                <span>/</span>
+                <span className="text-slate-400">v{appVersion}</span>
+              </>
+            )}
             <span>/</span>
             <span className="text-slate-200 font-medium">{getTabTitle()}</span>
           </div>

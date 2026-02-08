@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import {
   addGeminiUploadHistory,
   addGeminiApiLog,
@@ -13,6 +12,7 @@ import {
   setPersistentValue,
   toTokenPreview
 } from '../services/storage';
+import { generateGeminiContent } from '../services';
 import { Button } from '../components/Button';
 import { DataFormat } from '../core';
 import { Sparkles, MessageSquare, Loader2, Copy, Check, Trash2, Upload, Plus, Save, Pencil, X } from 'lucide-react';
@@ -138,12 +138,7 @@ ${textSection}`;
     setLoading(true);
 
     try {
-      const apiKey = getGeminiToken();
-      if (!apiKey) throw new Error('Gemini token is missing. Please set it in Settings > AI.');
-
-      const ai = new GoogleGenAI({ apiKey });
       const model = getGeminiModel();
-      const tokenPreview = toTokenPreview(apiKey);
 
       const promptSuffix = customPrompt.trim() ? `\n\nCustom prompt:\n${customPrompt.trim()}` : '';
       const contextSection = includeContext ? `\n\n${buildContextSection()}` : '';
@@ -152,17 +147,20 @@ ${textSection}`;
         contents: `${systemPrompt}${promptSuffix}${contextSection}\n\nUser: ${input}`,
       };
 
-      const result = await ai.models.generateContent({
+      const result = await generateGeminiContent({
         model: requestBody.model,
         contents: requestBody.contents,
       });
+      const tokenPreview = result.provider === 'electron-backend'
+        ? 'backend-managed'
+        : toTokenPreview(getGeminiToken());
 
       addGeminiApiLog({
         source: 'assistant',
         model,
         tokenPreview,
         requestBody: JSON.stringify(requestBody, null, 2),
-        responseBody: JSON.stringify({ text: result.text || '' }, null, 2),
+        responseBody: JSON.stringify({ provider: result.provider, text: result.text || '' }, null, 2),
         success: true
       });
 
@@ -178,7 +176,7 @@ ${textSection}`;
     } catch (e: any) {
       const errorMessage: Message = {
         role: 'assistant',
-        content: `Error: ${e.message}\n\nSet Gemini token in Settings > AI, or configure VITE_GEMINI_API_KEY.`,
+        content: `Error: ${e.message}\n\nSet Gemini token in Settings > AI, configure VITE_GEMINI_API_KEY, or start desktop backend.`,
         timestamp: Date.now()
       };
 

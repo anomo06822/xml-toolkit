@@ -1,0 +1,146 @@
+name: desktop-release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release-desktop:
+    name: Desktop Release (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            dotnet_runtime: osx-arm64
+            publish_dir: backend/publish/mac
+            builder_cmd: npm run desktop:dist:mac:ci
+          - os: windows-latest
+            dotnet_runtime: win-x64
+            publish_dir: backend/publish/win
+            builder_cmd: npm run desktop:dist:win:ci
+
+    env:
+      CSC_LINK: ${{ secrets.CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute release metadata
+        id: meta
+        shell: bash
+        run: |
+          VERSION=""
+          if [[ "${GITHUB_REF:-}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="0.0.${GITHUB_RUN_NUMBER}"
+          fi
+
+          REPO_FULL="${GITHUB_REPOSITORY}"
+          REPO_OWNER="${REPO_FULL%%/*}"
+          REPO_NAME="${REPO_FULL##*/}"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "repo_owner=$REPO_OWNER" >> "$GITHUB_OUTPUT"
+          echo "repo_name=$REPO_NAME" >> "$GITHUB_OUTPUT"
+          echo "UPDATE_OWNER=$REPO_OWNER" >> "$GITHUB_ENV"
+          echo "UPDATE_REPO=$REPO_NAME" >> "$GITHUB_ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Detect signing mode
+        id: signing
+        shell: bash
+        run: |
+          HAS_SIGNING=false
+          HAS_NOTARY=false
+
+          if [ -z "$CSC_LINK" ] || [ -z "$CSC_KEY_PASSWORD" ]; then
+            echo "Signing certificate secrets are missing. Build will continue in unsigned mode."
+          else
+            HAS_SIGNING=true
+          fi
+
+          if [ "${{ runner.os }}" = "macOS" ] && [ "$HAS_SIGNING" = "true" ]; then
+            if [ -n "$APPLE_ID" ] && [ -n "$APPLE_APP_SPECIFIC_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ]; then
+              HAS_NOTARY=true
+            else
+              echo "Notarization secrets are missing. macOS build will skip notarization."
+            fi
+          fi
+
+          ARTIFACT_MODE=unsigned
+          if [ "$HAS_SIGNING" = "true" ]; then
+            ARTIFACT_MODE=signed
+          fi
+
+          echo "has_signing=$HAS_SIGNING" >> "$GITHUB_OUTPUT"
+          echo "has_notary=$HAS_NOTARY" >> "$GITHUB_OUTPUT"
+          echo "artifact_mode=$ARTIFACT_MODE" >> "$GITHUB_OUTPUT"
+
+      - name: Install npm dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Apply release version
+        shell: bash
+        run: npm version "${{ steps.meta.outputs.version }}" --no-git-tag-version --allow-same-version
+
+      - name: Publish backend sidecar
+        shell: bash
+        run: |
+          dotnet publish backend/DataToolkit.Api/DataToolkit.Api.csproj \
+            -c Release \
+            -r ${{ matrix.dotnet_runtime }} \
+            --self-contained true \
+            /p:PublishSingleFile=true \
+            /p:PublishTrimmed=false \
+            -o ${{ matrix.publish_dir }}
+
+      - name: Build installers
+        run: ${{ matrix.builder_cmd }}
+
+      - name: Notarize and staple dmg
+        if: runner.os == 'macOS' && steps.signing.outputs.has_notary == 'true'
+        shell: bash
+        run: bash ./scripts/release/notarize-macos.sh
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: datatoolkit-${{ steps.meta.outputs.version }}-${{ steps.signing.outputs.artifact_mode }}-${{ runner.os }}-${{ github.sha }}
+          path: release/**
+          if-no-files-found: error
+
+      - name: Upload release assets to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/**/*.dmg
+            release/**/*.exe
+            release/**/*.zip
+            release/**/*.blockmap
+            release/**/latest*.yml
