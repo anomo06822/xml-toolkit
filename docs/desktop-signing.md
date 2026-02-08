@@ -25,6 +25,11 @@ If signing secrets are not configured, the release workflow still publishes unsi
 - CI packaging (unsigned): `.github/workflows/desktop-package.yml`
 - Signed release (tag/manual): `.github/workflows/desktop-release-signed.yml`
 
+Versioning in release workflow:
+
+- `refs/tags/vX.Y.Z` -> uses `X.Y.Z` as app version
+- manual dispatch -> uses `0.0.<run_number>`
+
 ## Release Trigger
 
 Push a tag like:
@@ -41,6 +46,8 @@ The release workflow will:
 3. Build installers via `electron-builder`
 4. If signing secrets exist: sign installers (+ notarize/staple macOS `.dmg`)
 5. Upload artifacts to GitHub Release
+
+The release workflow also uploads `latest*.yml` metadata so Electron auto-update can detect newer versions.
 
 ## Local Notarization Script
 

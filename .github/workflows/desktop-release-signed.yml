@@ -39,6 +39,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Compute release metadata
+        id: meta
+        shell: bash
+        run: |
+          VERSION=""
+          if [[ "${GITHUB_REF:-}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="0.0.${GITHUB_RUN_NUMBER}"
+          fi
+
+          REPO_FULL="${GITHUB_REPOSITORY}"
+          REPO_OWNER="${REPO_FULL%%/*}"
+          REPO_NAME="${REPO_FULL##*/}"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "repo_owner=$REPO_OWNER" >> "$GITHUB_OUTPUT"
+          echo "repo_name=$REPO_NAME" >> "$GITHUB_OUTPUT"
+          echo "UPDATE_OWNER=$REPO_OWNER" >> "$GITHUB_ENV"
+          echo "UPDATE_REPO=$REPO_NAME" >> "$GITHUB_ENV"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -83,6 +104,10 @@ jobs:
       - name: Install npm dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Apply release version
+        shell: bash
+        run: npm version "${{ steps.meta.outputs.version }}" --no-git-tag-version --allow-same-version
+
       - name: Publish backend sidecar
         shell: bash
         run: |
@@ -105,7 +130,7 @@ jobs:
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: datatoolkit-${{ steps.signing.outputs.artifact_mode }}-${{ runner.os }}-${{ github.sha }}
+          name: datatoolkit-${{ steps.meta.outputs.version }}-${{ steps.signing.outputs.artifact_mode }}-${{ runner.os }}-${{ github.sha }}
           path: release/**
           if-no-files-found: error
 
@@ -118,3 +143,4 @@ jobs:
             release/**/*.exe
             release/**/*.zip
             release/**/*.blockmap
+            release/**/latest*.yml

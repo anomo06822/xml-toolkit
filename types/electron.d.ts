@@ -18,12 +18,26 @@ declare global {
     backendUrl: string;
     backendRunning: boolean;
     platform: string;
+    appVersion: string;
   }
 
   interface ElectronShortcutResult {
     ok: boolean;
     accelerator?: string;
     error?: string;
+  }
+
+  interface ElectronUpdaterState {
+    status: string;
+    message: string;
+    progress: number;
+    currentVersion: string;
+    availableVersion: string | null;
+  }
+
+  interface ElectronUpdaterActionResult {
+    ok: boolean;
+    message?: string;
   }
 
   interface Window {
@@ -37,6 +51,13 @@ declare global {
         getSettings: () => Promise<ElectronDesktopSettings>;
         setWakeupShortcut: (accelerator: string) => Promise<ElectronShortcutResult>;
         wakeup: () => Promise<{ ok: boolean }>;
+        getUpdaterState: () => Promise<ElectronUpdaterState>;
+        checkForUpdates: () => Promise<ElectronUpdaterActionResult>;
+        downloadUpdate: () => Promise<ElectronUpdaterActionResult>;
+        quitAndInstall: () => Promise<ElectronUpdaterActionResult>;
+        onUpdaterEvent: (
+          handler: (event: { type: string; payload: ElectronUpdaterState }) => void
+        ) => () => void;
       };
       openExternal: (url: string) => Promise<void>;
     };

@@ -3,6 +3,10 @@ productName: DataToolkit
 artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
 directories:
   output: release
+publish:
+  provider: github
+  owner: "anomo06822"
+  repo: "xml-toolkit"
 files:
   - dist/**
   - electron/**
@@ -23,7 +27,12 @@ mac:
       arch:
         - arm64
         - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
 dmg:
+  format: ULFO
   artifactName: "${productName}-${version}-${arch}.${ext}"
 win:
   signAndEditExecutable: true

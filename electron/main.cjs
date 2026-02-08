@@ -1,4 +1,5 @@
 const { app, BrowserWindow, Menu, Tray, globalShortcut, ipcMain, nativeImage, shell } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -13,6 +14,13 @@ let backendProcess = null;
 let mainWindowRef = null;
 let statusTray = null;
 let wakeupShortcut = DEFAULT_WAKEUP_SHORTCUT;
+let updaterState = {
+  status: 'idle',
+  message: '',
+  progress: 0,
+  currentVersion: app.getVersion(),
+  availableVersion: null
+};
 
 const getIndexHtmlPath = () => path.join(app.getAppPath(), 'dist', 'index.html');
 
@@ -60,6 +68,7 @@ const refreshTrayMenu = () => {
   const backendStatus = getTrayBackendStatus();
   const menu = Menu.buildFromTemplate([
     { label: 'DataToolkit', enabled: false },
+    { label: `Version: ${app.getVersion()}`, enabled: false },
     { type: 'separator' },
     { label: `Wakeup Shortcut: ${wakeupShortcut}`, enabled: false },
     { label: `Backend: ${backendStatus}`, enabled: false },
@@ -90,6 +99,66 @@ const refreshTrayMenu = () => {
   if (process.platform === 'darwin') {
     statusTray.setTitle('DT');
   }
+};
+
+const pushUpdaterEvent = (type, payload = {}) => {
+  if (mainWindowRef && !mainWindowRef.isDestroyed()) {
+    mainWindowRef.webContents.send('desktop:updaterEvent', { type, payload });
+  }
+};
+
+const setUpdaterState = (nextPartial) => {
+  updaterState = { ...updaterState, ...nextPartial };
+  pushUpdaterEvent('state-changed', updaterState);
+};
+
+const setupAutoUpdater = () => {
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('checking-for-update', () => {
+    setUpdaterState({ status: 'checking', message: 'Checking for updates...' });
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    setUpdaterState({
+      status: 'available',
+      message: `Update available: ${info?.version || 'new version'}`,
+      availableVersion: info?.version || null
+    });
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    setUpdaterState({
+      status: 'up-to-date',
+      message: 'You are using the latest version.',
+      availableVersion: null
+    });
+  });
+
+  autoUpdater.on('error', (error) => {
+    setUpdaterState({
+      status: 'error',
+      message: error?.message || 'Update check failed.'
+    });
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    setUpdaterState({
+      status: 'downloading',
+      message: `Downloading update... ${Math.round(progressObj.percent || 0)}%`,
+      progress: progressObj.percent || 0
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    setUpdaterState({
+      status: 'downloaded',
+      message: `Update ${info?.version || ''} downloaded. Restart to install.`,
+      availableVersion: info?.version || updaterState.availableVersion,
+      progress: 100
+    });
+  });
 };
 
 const createStatusTray = () => {
@@ -296,7 +365,8 @@ ipcMain.handle('desktop:getSettings', async () => {
     wakeupShortcut,
     backendUrl: BACKEND_URL,
     backendRunning: getBackendRunning(),
-    platform: process.platform
+    platform: process.platform,
+    appVersion: app.getVersion()
   };
 });
 
@@ -309,7 +379,49 @@ ipcMain.handle('desktop:wakeup', async () => {
   return { ok: true };
 });
 
+ipcMain.handle('desktop:getUpdaterState', async () => {
+  return updaterState;
+});
+
+ipcMain.handle('desktop:checkForUpdates', async () => {
+  if (!app.isPackaged) {
+    const message = 'Update check is available only in packaged app.';
+    setUpdaterState({ status: 'dev-mode', message });
+    return { ok: false, message };
+  }
+
+  try {
+    await autoUpdater.checkForUpdates();
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to check updates.';
+    setUpdaterState({ status: 'error', message });
+    return { ok: false, message };
+  }
+});
+
+ipcMain.handle('desktop:downloadUpdate', async () => {
+  if (!app.isPackaged) {
+    return { ok: false, message: 'Download update is available only in packaged app.' };
+  }
+
+  try {
+    await autoUpdater.downloadUpdate();
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to download update.';
+    setUpdaterState({ status: 'error', message });
+    return { ok: false, message };
+  }
+});
+
+ipcMain.handle('desktop:quitAndInstall', async () => {
+  autoUpdater.quitAndInstall();
+  return { ok: true };
+});
+
 app.whenReady().then(async () => {
+  setupAutoUpdater();
   createStatusTray();
   const shortcutResult = registerWakeupShortcut(wakeupShortcut);
   if (!shortcutResult.ok) {

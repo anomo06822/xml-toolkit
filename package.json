@@ -4,6 +4,7 @@
   "version": "2.0.0",
   "type": "module",
   "main": "electron/main.cjs",
+  "author": "anomo06822",
   "description": "Professional multi-format data toolkit for XML, JSON, and Markdown",
   "scripts": {
     "dev": "vite",
@@ -30,6 +31,7 @@
   "dependencies": {
     "@google/genai": "^1.30.0",
     "dompurify": "^3.3.1",
+    "electron-updater": "^6.3.9",
     "github-markdown-css": "^5.8.1",
     "lucide-react": "^0.554.0",
     "marked": "^17.0.1",

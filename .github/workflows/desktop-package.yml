@@ -33,6 +33,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set update feed repository
+        shell: bash
+        run: |
+          REPO_FULL="${GITHUB_REPOSITORY}"
+          REPO_OWNER="${REPO_FULL%%/*}"
+          REPO_NAME="${REPO_FULL##*/}"
+          echo "UPDATE_OWNER=$REPO_OWNER" >> "$GITHUB_ENV"
+          echo "UPDATE_REPO=$REPO_NAME" >> "$GITHUB_ENV"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

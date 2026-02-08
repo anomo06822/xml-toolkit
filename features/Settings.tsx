@@ -16,6 +16,8 @@ export const SettingsPage: React.FC = () => {
   const [importError, setImportError] = useState<string | null>(null);
   const [shortcutStatus, setShortcutStatus] = useState<string | null>(null);
   const [desktopStatus, setDesktopStatus] = useState<string>('not-detected');
+  const [appVersion, setAppVersion] = useState<string>('');
+  const [updaterState, setUpdaterState] = useState<ElectronUpdaterState | null>(null);
   
   useEffect(() => {
     const localSettings = getSettings();
@@ -29,10 +31,25 @@ export const SettingsPage: React.FC = () => {
             globalWakeupShortcut: desktopSettings.wakeupShortcut || prev.globalWakeupShortcut
           }));
           setDesktopStatus(desktopSettings.backendRunning ? 'backend-running' : 'backend-stopped');
+          setAppVersion(desktopSettings.appVersion || '');
         })
         .catch(() => {
           setDesktopStatus('backend-unknown');
         });
+
+      window.electronAPI.desktop.getUpdaterState()
+        .then((state) => setUpdaterState(state))
+        .catch(() => setUpdaterState(null));
+
+      const unsubscribe = window.electronAPI.desktop.onUpdaterEvent((event) => {
+        if (event?.payload) {
+          setUpdaterState(event.payload);
+        }
+      });
+
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
     }
   }, []);
   
@@ -55,6 +72,24 @@ export const SettingsPage: React.FC = () => {
 
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleCheckForUpdates = async () => {
+    const result = await window.electronAPI?.desktop.checkForUpdates();
+    if (result && !result.ok && result.message) {
+      setShortcutStatus(`Update check failed: ${result.message}`);
+    }
+  };
+
+  const handleDownloadUpdate = async () => {
+    const result = await window.electronAPI?.desktop.downloadUpdate();
+    if (result && !result.ok && result.message) {
+      setShortcutStatus(`Download failed: ${result.message}`);
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    await window.electronAPI?.desktop.quitAndInstall();
   };
   
   const handleReset = () => {
@@ -273,6 +308,38 @@ export const SettingsPage: React.FC = () => {
                 Test Wakeup
               </Button>
             </div>
+            <div className="text-xs text-slate-500">
+              Version: <span className="text-slate-300">{appVersion || '(unknown)'}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" size="sm" onClick={() => { void handleCheckForUpdates(); }}>
+                Check Updates
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => { void handleDownloadUpdate(); }}
+                disabled={updaterState?.status !== 'available'}
+              >
+                Download Update
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => { void handleInstallUpdate(); }}
+                disabled={updaterState?.status !== 'downloaded'}
+              >
+                Restart and Install
+              </Button>
+            </div>
+            <div className="text-xs text-slate-500">
+              Update status: <span className="text-slate-300">{updaterState?.status || 'idle'}</span>
+              {updaterState?.message ? <span className="ml-2 text-slate-400">{updaterState.message}</span> : null}
+            </div>
+            {typeof updaterState?.progress === 'number' && updaterState.progress > 0 && updaterState.progress < 100 && (
+              <div className="h-2 w-full rounded bg-slate-800 overflow-hidden">
+                <div className="h-full bg-primary" style={{ width: `${Math.round(updaterState.progress)}%` }} />
+              </div>
+            )}
             {shortcutStatus && <p className="text-xs text-blue-300">{shortcutStatus}</p>}
           </div>
         </section>
