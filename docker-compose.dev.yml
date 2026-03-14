@@ -19,8 +19,22 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     command: npm run dev
+    networks:
+      - datatoolkit-dev-network
+
+  backend:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    container_name: datatoolkit-dev-backend
+    working_dir: /app
+    ports:
+      - "5188:5188"
+    volumes:
+      - .:/app
+    environment:
+      - ASPNETCORE_URLS=http://0.0.0.0:5188
+      - DATATOOLKIT_CONFIG_PATH=/app/config/backend/ai.secrets.json
+    command: dotnet run --project backend/DataToolkit.Api/DataToolkit.Api.csproj --urls http://0.0.0.0:5188
     networks:
       - datatoolkit-dev-network
 

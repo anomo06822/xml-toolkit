@@ -7,6 +7,14 @@ This project supports desktop releases with optional signing:
 
 If signing secrets are not configured, the release workflow still publishes unsigned installers.
 
+## AI Secret Handling
+
+Gemini credentials are no longer injected through release workflow environment variables.
+
+- Desktop builds package the backend binary without secrets.
+- Each installed app stores its Gemini key locally through `Settings > AI`.
+- The local key file lives under the app user-data directory and is outside the published bundle.
+
 ## Optional GitHub Secrets (for signed builds)
 
 ### Shared (Electron code signing)

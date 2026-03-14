@@ -152,7 +152,6 @@ export interface AppSettings {
   autoFormat: boolean;
   fontSize: number;
   showLineNumbers: boolean;
-  geminiToken: string;
   geminiModel: GeminiModel;
   globalWakeupShortcut: string;
 }
@@ -188,15 +187,34 @@ const defaultSettings: AppSettings = {
   autoFormat: false,
   fontSize: 14,
   showLineNumbers: true,
-  geminiToken: '',
   geminiModel: DEFAULT_GEMINI_MODEL,
   globalWakeupShortcut: 'CommandOrControl+Shift+Space'
+};
+
+const sanitizeSettingsPayload = (value: unknown): Partial<AppSettings> => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  const { geminiToken: _legacyGeminiToken, ...rest } = value as Record<string, unknown>;
+  return rest as Partial<AppSettings>;
 };
 
 export const getSettings = (): AppSettings => {
   try {
     const data = localStorage.getItem(SETTINGS_KEY);
-    return data ? { ...defaultSettings, ...JSON.parse(data) } : defaultSettings;
+    if (!data) {
+      return defaultSettings;
+    }
+
+    const parsed = JSON.parse(data);
+    const sanitized = sanitizeSettingsPayload(parsed);
+
+    if (parsed && typeof parsed === 'object' && 'geminiToken' in parsed) {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...defaultSettings, ...sanitized }));
+    }
+
+    return { ...defaultSettings, ...sanitized };
   } catch (e) {
     console.error('Failed to load settings:', e);
     return defaultSettings;
@@ -215,27 +233,8 @@ export const resetSettings = (): AppSettings => {
   return defaultSettings;
 };
 
-export const getGeminiToken = (): string => {
-  const settingsToken = getSettings().geminiToken?.trim();
-  if (settingsToken) {
-    return settingsToken;
-  }
-
-  const env = (import.meta as any).env || {};
-  return env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY || '';
-};
-
 export const getGeminiModel = (): GeminiModel => {
   return resolveGeminiModel(getSettings().geminiModel);
-};
-
-export const toTokenPreview = (token: string): string => {
-  const normalized = token.trim();
-  if (!normalized) return '(missing)';
-  if (normalized.length <= 10) {
-    return `${normalized.slice(0, 2)}***${normalized.slice(-2)}`;
-  }
-  return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
 };
 
 // ============================================
@@ -294,7 +293,7 @@ export interface GeminiApiLogEntry {
   timestamp: number;
   source: 'assistant' | 'diff-summary';
   model: GeminiModel;
-  tokenPreview: string;
+  provider: 'electron-backend' | 'http-backend' | 'unknown';
   requestBody: string;
   responseBody?: string;
   error?: string;
@@ -464,7 +463,8 @@ export const exportAllData = (): string => {
   Object.keys(localStorage).forEach(key => {
     if (key.startsWith(STORAGE_PREFIX)) {
       try {
-        data[key] = JSON.parse(localStorage.getItem(key) || '');
+        const parsed = JSON.parse(localStorage.getItem(key) || '');
+        data[key] = key === SETTINGS_KEY ? sanitizeSettingsPayload(parsed) : parsed;
       } catch {
         data[key] = localStorage.getItem(key);
       }
@@ -480,7 +480,8 @@ export const importData = (jsonStr: string): boolean => {
     
     for (const [key, value] of Object.entries(data)) {
       if (key.startsWith(STORAGE_PREFIX)) {
-        localStorage.setItem(key, JSON.stringify(value));
+        const sanitizedValue = key === SETTINGS_KEY ? sanitizeSettingsPayload(value) : value;
+        localStorage.setItem(key, JSON.stringify(sanitizedValue));
       }
     }
     

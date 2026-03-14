@@ -23,11 +23,11 @@ Multi-format data toolkit for XML, JSON, and Markdown, now with Electron desktop
 
 ```bash
 npm install
-cp .env.example .env
-# Optional for web/direct Gemini mode:
-# GEMINI_API_KEY=your_key
+npm run backend:run
 npm run dev
 ```
+
+For local AI usage, create `backend/DataToolkit.Api/appsettings.Local.json` from `backend/DataToolkit.Api/appsettings.Local.example.json` before starting the backend.
 
 ## Quick Start (Electron Desktop)
 
@@ -45,6 +45,8 @@ If you want Electron to auto-run `.NET 10` backend:
 ```bash
 npm run electron:dev:backend
 ```
+
+Store the Gemini API key from `Settings > AI`. The desktop app writes it to a local file under the app user-data directory instead of bundling it into renderer assets.
 
 ## Desktop Packaging
 
@@ -130,7 +132,10 @@ npm run backend:run
 
 Backend reads:
 
-- `GEMINI_API_KEY` from environment
+- `backend/DataToolkit.Api/appsettings.Local.json` for local development
+- `config/backend/ai.secrets.json` when running through Docker Compose
+- `DATATOOLKIT_CONFIG_PATH` for mounted/managed secret files
+- `.NET user secrets` for local development overrides
 
 ### Publish backend for Electron bundle
 
@@ -149,10 +154,10 @@ npm run backend:publish:win
 The app now uses this order:
 
 1. If running in Electron, call local backend through IPC (`window.electronAPI.backend.generate`).
-2. If backend is unavailable and a frontend token exists, fallback to direct `@google/genai`.
-3. If neither is available, show configuration error.
+2. Otherwise, call the same-origin backend endpoint (`/api/ai/generate`).
+3. If backend is unavailable or the backend key is missing, show a configuration error.
 
-This keeps web mode compatible while allowing desktop deployments to hide upstream API keys in backend.
+This keeps secrets out of the published frontend bundle and moves AI credentials into backend-managed config files.
 
 ## Scripts
 
@@ -192,6 +197,7 @@ datatoolkit/
 ## Notes
 
 - Web/Docker mode and Electron mode can coexist.
+- Desktop release workflows do not carry Gemini secrets; each installed app stores its own local backend secret after first-run setup.
 - For macOS notarization, workflow uses `scripts/release/notarize-macos.sh`.
 
 ## License

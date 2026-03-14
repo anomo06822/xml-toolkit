@@ -7,7 +7,7 @@ import { getSettings, updateSettings, resetSettings, AppSettings, exportAllData,
 import { Button } from '../components/Button';
 import { FormatSelector } from '../components/common/FormatSelector';
 import { DataFormat } from '../core';
-import { Settings, Download, Upload, RotateCcw, Check, Save, Keyboard, Monitor } from 'lucide-react';
+import { Settings, Download, Upload, RotateCcw, Check, Save, Keyboard, Monitor, Trash2 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   const isElectron = Boolean(window.electronAPI?.isElectron);
@@ -15,9 +15,23 @@ export const SettingsPage: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [shortcutStatus, setShortcutStatus] = useState<string | null>(null);
+  const [desktopAiStatus, setDesktopAiStatus] = useState<string | null>(null);
   const [desktopStatus, setDesktopStatus] = useState<string>('not-detected');
+  const [desktopAiConfig, setDesktopAiConfig] = useState<ElectronAiConfigState | null>(null);
+  const [desktopGeminiApiKey, setDesktopGeminiApiKey] = useState('');
   const [appVersion, setAppVersion] = useState<string>('');
   const [updaterState, setUpdaterState] = useState<ElectronUpdaterState | null>(null);
+
+  const reloadDesktopAiConfig = async () => {
+    if (!window.electronAPI?.isElectron) return;
+
+    try {
+      const aiConfig = await window.electronAPI.desktop.getAiConfig();
+      setDesktopAiConfig(aiConfig);
+    } catch {
+      setDesktopAiConfig(null);
+    }
+  };
   
   useEffect(() => {
     const localSettings = getSettings();
@@ -36,6 +50,7 @@ export const SettingsPage: React.FC = () => {
         .catch(() => {
           setDesktopStatus('backend-unknown');
         });
+      void reloadDesktopAiConfig();
 
       window.electronAPI.desktop.getUpdaterState()
         .then((state) => setUpdaterState(state))
@@ -97,6 +112,51 @@ export const SettingsPage: React.FC = () => {
       const defaults = resetSettings();
       setSettings(defaults);
     }
+  };
+
+  const handleSaveDesktopAiConfig = async () => {
+    if (!window.electronAPI?.isElectron) {
+      return;
+    }
+
+    const geminiApiKey = desktopGeminiApiKey.trim();
+    if (!geminiApiKey) {
+      setDesktopAiStatus('Enter a Gemini API key before saving.');
+      return;
+    }
+
+    const result = await window.electronAPI.desktop.saveAiConfig({ geminiApiKey });
+    if (result.ok) {
+      setDesktopGeminiApiKey('');
+      setDesktopAiConfig(result);
+      setDesktopAiStatus(`Saved to ${result.configPath}`);
+    } else {
+      setDesktopAiStatus(`Failed: ${result.error || 'Unable to save AI config.'}`);
+    }
+  };
+
+  const handleClearDesktopAiConfig = async () => {
+    if (!window.electronAPI?.isElectron) {
+      return;
+    }
+
+    if (!confirm('Remove the stored Gemini API key from the desktop config file?')) {
+      return;
+    }
+
+    const result = await window.electronAPI.desktop.clearAiConfig();
+    if (result.ok) {
+      setDesktopGeminiApiKey('');
+      setDesktopAiConfig(result);
+      setDesktopAiStatus('Stored Gemini API key removed.');
+    } else {
+      setDesktopAiStatus(`Failed: ${result.error || 'Unable to clear AI config.'}`);
+    }
+  };
+
+  const describeAiSource = (source?: ElectronAiConfigState['source']) => {
+    if (source === 'file') return 'local file';
+    return 'not configured';
   };
   
   const handleExport = () => {
@@ -228,22 +288,6 @@ export const SettingsPage: React.FC = () => {
         <h2 className="text-lg font-semibold text-slate-200 mb-4">AI</h2>
 
         <div className="space-y-4">
-          <div className="flex justify-between items-start gap-4">
-            <div>
-              <label className="text-sm font-medium text-slate-300">Gemini Token</label>
-              <p className="text-xs text-slate-500">
-                Used for AI features. Stored only in your browser local storage.
-              </p>
-            </div>
-            <input
-              type="password"
-              value={settings.geminiToken}
-              onChange={(e) => handleChange('geminiToken', e.target.value)}
-              placeholder="Paste Gemini API token"
-              className="w-80 max-w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none"
-            />
-          </div>
-
           <div className="flex justify-between items-center gap-4">
             <div>
               <label className="text-sm font-medium text-slate-300">Gemini Model</label>
@@ -263,6 +307,59 @@ export const SettingsPage: React.FC = () => {
               ))}
             </select>
           </div>
+
+          {isElectron ? (
+            <div className="space-y-3 rounded-lg border border-slate-700 bg-slate-900/40 p-4">
+              <div className="flex justify-between items-start gap-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-300">Desktop Backend Secret</label>
+                  <p className="text-xs text-slate-500">
+                    Stored outside the app bundle in a local JSON file and excluded from export/import.
+                  </p>
+                </div>
+                <input
+                  type="password"
+                  value={desktopGeminiApiKey}
+                  onChange={(e) => setDesktopGeminiApiKey(e.target.value)}
+                  placeholder={desktopAiConfig?.configured ? 'Leave blank to keep existing key' : 'Paste Gemini API key'}
+                  className="w-80 max-w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
+
+              <div className="text-xs text-slate-500 space-y-1">
+                <div>Config path: <span className="text-slate-300 break-all">{desktopAiConfig?.configPath || '(loading...)'}</span></div>
+                <div>Current source: <span className="text-slate-300">{describeAiSource(desktopAiConfig?.source)}</span></div>
+                <div>Configured: <span className="text-slate-300">{desktopAiConfig?.configured ? 'yes' : 'no'}</span></div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" onClick={() => { void handleSaveDesktopAiConfig(); }}>
+                  Save Backend Token
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => { void handleClearDesktopAiConfig(); }}
+                  disabled={desktopAiConfig?.source !== 'file'}
+                  icon={<Trash2 size={14} />}
+                >
+                  Clear Stored Token
+                </Button>
+              </div>
+              {desktopAiStatus && <p className="text-xs text-blue-300">{desktopAiStatus}</p>}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-4 text-xs text-slate-400 space-y-2">
+              <p>Web AI requests no longer accept browser-stored tokens.</p>
+              <p>
+                Configure the Gemini API key on the backend using
+                <code className="text-slate-200 px-1">backend/DataToolkit.Api/appsettings.Local.json</code>
+                during local development, or set
+                <code className="text-slate-200 px-1">DATATOOLKIT_CONFIG_PATH</code>
+                to a mounted secrets file in deployment.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -354,7 +451,7 @@ export const SettingsPage: React.FC = () => {
           <div className="flex justify-between items-center">
             <div>
               <label className="text-sm font-medium text-slate-300">Export Data</label>
-              <p className="text-xs text-slate-500">Download all templates and settings</p>
+              <p className="text-xs text-slate-500">Download templates and settings. Secrets stored outside local storage are excluded.</p>
             </div>
             <Button variant="secondary" size="sm" onClick={handleExport} icon={<Download size={14} />}>
               Export

@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { DataFormat, DiffResult as DiffResultType, computeDiff, detectFormat, sort } from '../../core';
 import { CodeEditor } from '../../components/common';
 import { Button } from '../../components/Button';
-import { addGeminiApiLog, formatShortcut, generateGeminiContent, getGeminiToken, getGeminiModel, isPrimaryShortcut, setAiContextByFormat, toTokenPreview } from '../../services';
+import { addGeminiApiLog, formatShortcut, generateGeminiContent, getGeminiModel, isPrimaryShortcut, setAiContextByFormat } from '../../services';
 import { GitCompare, Settings2, ArrowDownAZ, Copy, Check, Sparkles, Loader2, FileCode, Braces, FileText } from 'lucide-react';
 
 const SAMPLE_DIFF_LEFT = `{
@@ -129,13 +129,10 @@ Please provide a clear, technical summary of the changes:`;
         model,
         contents: prompt
       });
-      const tokenPreview = response.provider === 'electron-backend'
-        ? 'backend-managed'
-        : toTokenPreview(getGeminiToken());
       addGeminiApiLog({
         source: 'diff-summary',
         model,
-        tokenPreview,
+        provider: response.provider,
         requestBody: JSON.stringify(requestBody, null, 2),
         responseBody: JSON.stringify({ provider: response.provider, text: response.text || '' }, null, 2),
         success: true
@@ -147,7 +144,7 @@ Please provide a clear, technical summary of the changes:`;
       addGeminiApiLog({
         source: 'diff-summary',
         model: getGeminiModel(),
-        tokenPreview: toTokenPreview(getGeminiToken()),
+        provider: window.electronAPI?.isElectron ? 'electron-backend' : 'http-backend',
         requestBody: JSON.stringify({ format: detectedFormat.format }, null, 2),
         error: error?.message || 'Unknown error',
         success: false

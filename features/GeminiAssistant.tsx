@@ -4,15 +4,13 @@ import {
   addGeminiApiLog,
   getGeminiUploadHistory,
   getAiContext,
-  getGeminiToken,
   getGeminiModel,
   getPersistentValue,
   GeminiUploadHistoryEntry,
   setAiContextByFormat,
-  setPersistentValue,
-  toTokenPreview
+  setPersistentValue
 } from '../services/storage';
-import { generateGeminiContent } from '../services';
+import { generateGeminiContent, getGeminiSetupHint } from '../services';
 import { Button } from '../components/Button';
 import { DataFormat } from '../core';
 import { Sparkles, MessageSquare, Loader2, Copy, Check, Trash2, Upload, Plus, Save, Pencil, X } from 'lucide-react';
@@ -151,14 +149,11 @@ ${textSection}`;
         model: requestBody.model,
         contents: requestBody.contents,
       });
-      const tokenPreview = result.provider === 'electron-backend'
-        ? 'backend-managed'
-        : toTokenPreview(getGeminiToken());
 
       addGeminiApiLog({
         source: 'assistant',
         model,
-        tokenPreview,
+        provider: result.provider,
         requestBody: JSON.stringify(requestBody, null, 2),
         responseBody: JSON.stringify({ provider: result.provider, text: result.text || '' }, null, 2),
         success: true
@@ -176,14 +171,14 @@ ${textSection}`;
     } catch (e: any) {
       const errorMessage: Message = {
         role: 'assistant',
-        content: `Error: ${e.message}\n\nSet Gemini token in Settings > AI, configure VITE_GEMINI_API_KEY, or start desktop backend.`,
+        content: `Error: ${e.message}\n\n${getGeminiSetupHint()}`,
         timestamp: Date.now()
       };
 
       addGeminiApiLog({
         source: 'assistant',
         model: getGeminiModel(),
-        tokenPreview: toTokenPreview(getGeminiToken()),
+        provider: window.electronAPI?.isElectron ? 'electron-backend' : 'http-backend',
         requestBody: JSON.stringify({ prompt: input }, null, 2),
         error: e?.message || 'Unknown error',
         success: false

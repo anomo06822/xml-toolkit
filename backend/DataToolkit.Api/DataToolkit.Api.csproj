@@ -3,5 +3,6 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>DataToolkit.Api-bd98999f-399e-4de7-b2b2-86504b356d3d</UserSecretsId>
   </PropertyGroup>
 </Project>

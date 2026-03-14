@@ -21,6 +21,17 @@ declare global {
     appVersion: string;
   }
 
+  interface ElectronAiConfigState {
+    configured: boolean;
+    configPath: string;
+    source: 'file' | 'none';
+  }
+
+  interface ElectronAiConfigMutationResult extends ElectronAiConfigState {
+    ok: boolean;
+    error?: string;
+  }
+
   interface ElectronShortcutResult {
     ok: boolean;
     accelerator?: string;
@@ -49,6 +60,9 @@ declare global {
       };
       desktop: {
         getSettings: () => Promise<ElectronDesktopSettings>;
+        getAiConfig: () => Promise<ElectronAiConfigState>;
+        saveAiConfig: (payload: { geminiApiKey: string }) => Promise<ElectronAiConfigMutationResult>;
+        clearAiConfig: () => Promise<ElectronAiConfigMutationResult>;
         setWakeupShortcut: (accelerator: string) => Promise<ElectronShortcutResult>;
         wakeup: () => Promise<{ ok: boolean }>;
         getUpdaterState: () => Promise<ElectronUpdaterState>;

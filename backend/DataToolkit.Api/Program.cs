@@ -1,27 +1,25 @@
 using System.Text;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
+var customConfigPath = Environment.GetEnvironmentVariable("DATATOOLKIT_CONFIG_PATH");
+if (!string.IsNullOrWhiteSpace(customConfigPath))
+{
+    builder.Configuration.AddJsonFile(customConfigPath, optional: true, reloadOnChange: true);
+}
+
+builder.Configuration.AddUserSecrets<Program>(optional: true);
+builder.Services.Configure<GeminiOptions>(builder.Configuration.GetSection(GeminiOptions.SectionName));
 builder.Services.AddHttpClient("gemini", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(45);
 });
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("desktop", policy =>
-    {
-        policy
-            .WithOrigins("http://localhost:3000", "http://127.0.0.1:3000")
-            .AllowAnyMethod()
-            .AllowAnyHeader();
-    });
-});
-
 var app = builder.Build();
-
-app.UseCors("desktop");
 
 app.MapGet("/health", () =>
 {
@@ -36,7 +34,7 @@ app.MapGet("/health", () =>
 app.MapPost("/api/ai/generate", async (
     GenerateRequest request,
     IHttpClientFactory httpClientFactory,
-    IConfiguration configuration,
+    IOptions<GeminiOptions> geminiOptions,
     CancellationToken cancellationToken) =>
 {
     if (string.IsNullOrWhiteSpace(request.Model) || string.IsNullOrWhiteSpace(request.Contents))
@@ -44,16 +42,16 @@ app.MapPost("/api/ai/generate", async (
         return Results.BadRequest(new { error = "model and contents are required" });
     }
 
-    var apiKey = configuration["GEMINI_API_KEY"];
+    var apiKey = geminiOptions.Value.ApiKey;
     if (string.IsNullOrWhiteSpace(apiKey))
     {
         return Results.Problem(
-            detail: "GEMINI_API_KEY is not configured on backend.",
+            detail: "Gemini API key is not configured on backend.",
             statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 
     var endpoint =
-        $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(request.Model)}:generateContent?key={Uri.EscapeDataString(apiKey)}";
+        $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(request.Model)}:generateContent";
 
     var payload = new JsonObject
     {
@@ -76,6 +74,7 @@ app.MapPost("/api/ai/generate", async (
     {
         Content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json")
     };
+    upstreamRequest.Headers.Add("x-goog-api-key", apiKey);
 
     var client = httpClientFactory.CreateClient("gemini");
     using var upstreamResponse = await client.SendAsync(upstreamRequest, cancellationToken);
@@ -120,3 +119,9 @@ static string? ExtractText(string json)
 }
 
 internal sealed record GenerateRequest(string Model, string Contents);
+internal sealed class GeminiOptions
+{
+    public const string SectionName = "Gemini";
+
+    public string? ApiKey { get; init; }
+}

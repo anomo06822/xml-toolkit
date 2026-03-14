@@ -14,11 +14,14 @@
 # 1. 安裝依賴
 npm install
 
-# 2. 配置環境變量（可選）
-cp .env.example .env
-# 編輯 .env 添加 GEMINI_API_KEY (如果要使用 AI 功能)
+# 2. 配置後端 AI secrets（如果要使用 AI 功能）
+cp backend/DataToolkit.Api/appsettings.Local.example.json backend/DataToolkit.Api/appsettings.Local.json
+# 編輯 backend/DataToolkit.Api/appsettings.Local.json 填入 Gemini API key
 
-# 3. 啟動開發服務器
+# 3. 啟動後端（另一個終端）
+npm run backend:run
+
+# 4. 啟動開發服務器
 npm run dev
 ```
 
@@ -27,6 +30,9 @@ npm run dev
 ### 方法 2: Docker 部署
 
 ```bash
+# 如需 AI 功能，先建立 config/backend/ai.secrets.json
+cp config/backend/ai.secrets.example.json config/backend/ai.secrets.json
+
 # 開發模式（帶熱重載）
 docker-compose -f docker-compose.dev.yml up
 
@@ -59,6 +65,7 @@ docker-compose --profile with-nginx up -d
 - **操作歷史** - 追踪所有操作
 - **數據持久化** - 本地存儲所有數據
 - **導出/導入** - 備份和恢復數據
+- **安全匯出** - 備份不包含桌面 backend secret
 - **AI 助手** - Gemini 驅動的智能助手
 - **設置頁面** - 自定義編輯器偏好
 - **Docker 部署** - 生產就緒的容器化
@@ -202,17 +209,11 @@ npx tsc --noEmit
 
 ## 📝 環境變量
 
-創建 `.env` 文件：
+前端不再接受公開的 Gemini token。AI secret 請改放在以下檔案之一：
 
 ```bash
-# 應用端口
-APP_PORT=3000
-
-# Google Gemini API Key (用於 AI 功能)
-GEMINI_API_KEY=your_api_key_here
-
-# 環境
-NODE_ENV=production
+backend/DataToolkit.Api/appsettings.Local.json
+config/backend/ai.secrets.json
 ```
 
 ---

@@ -54,7 +54,7 @@ export const GeminiApiLogs: React.FC = () => {
                 </span>
                 <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">{log.source}</span>
                 <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300">{log.model}</span>
-                <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400">token: {log.tokenPreview}</span>
+                <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400">provider: {log.provider}</span>
                 <span className="text-slate-500">{new Date(log.timestamp).toLocaleString()}</span>
               </div>
 

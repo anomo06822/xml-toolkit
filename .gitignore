@@ -16,12 +16,16 @@ dist-ssr
 build
 release
 backend/publish
+backend/**/bin
+backend/**/obj
 
 # Environment
 *.local
 .env
 .env.local
 .env.*.local
+backend/DataToolkit.Api/appsettings.Local.json
+config/backend/ai.secrets.json
 
 # Editor directories and files
 .vscode/*

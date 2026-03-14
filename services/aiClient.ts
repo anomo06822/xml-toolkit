@@ -1,6 +1,4 @@
-import { getGeminiToken } from './storage';
-
-export type GeminiProvider = 'electron-backend' | 'direct-sdk';
+export type GeminiProvider = 'electron-backend' | 'http-backend';
 
 export interface GeminiGenerateResult {
   provider: GeminiProvider;
@@ -29,37 +27,43 @@ const tryElectronBackend = async (request: GeminiGenerateRequest): Promise<Gemin
   };
 };
 
-const generateFromSdk = async (request: GeminiGenerateRequest): Promise<GeminiGenerateResult> => {
-  const apiKey = getGeminiToken().trim();
-  if (!apiKey) {
-    throw new Error('Gemini token is missing. Please set it in Settings > AI, or configure VITE_GEMINI_API_KEY.');
-  }
-
-  const { GoogleGenAI } = await import('@google/genai');
-  const ai = new GoogleGenAI({ apiKey });
-  const response = await ai.models.generateContent({
-    model: request.model,
-    contents: request.contents
+const generateFromHttpBackend = async (request: GeminiGenerateRequest): Promise<GeminiGenerateResult> => {
+  const response = await fetch('/api/ai/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(request)
   });
 
+  const contentType = response.headers.get('content-type') || '';
+  const payload = contentType.includes('json')
+    ? await response.json()
+    : { error: await response.text() };
+
+  if (!response.ok) {
+    throw new Error(payload.error || payload.detail || `Backend request failed (${response.status})`);
+  }
+
   return {
-    provider: 'direct-sdk',
-    text: response.text || ''
+    provider: 'http-backend',
+    text: payload.text || ''
   };
 };
 
-export const generateGeminiContent = async (request: GeminiGenerateRequest): Promise<GeminiGenerateResult> => {
-  try {
-    const desktopResult = await tryElectronBackend(request);
-    if (desktopResult) {
-      return desktopResult;
-    }
-  } catch (error) {
-    const tokenAvailable = getGeminiToken().trim().length > 0;
-    if (!tokenAvailable) {
-      throw error;
-    }
+export const getGeminiSetupHint = (): string => {
+  if (typeof window !== 'undefined' && window.electronAPI?.isElectron) {
+    return 'Set the Gemini API key in Settings > AI and keep the desktop backend running.';
   }
 
-  return generateFromSdk(request);
+  return 'Configure the backend Gemini API key in backend/DataToolkit.Api/appsettings.Local.json or via DATATOOLKIT_CONFIG_PATH, then make sure /api/ai/generate is reachable.';
+};
+
+export const generateGeminiContent = async (request: GeminiGenerateRequest): Promise<GeminiGenerateResult> => {
+  const desktopResult = await tryElectronBackend(request);
+  if (desktopResult) {
+    return desktopResult;
+  }
+
+  return generateFromHttpBackend(request);
 };

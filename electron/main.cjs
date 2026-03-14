@@ -22,6 +22,65 @@ let updaterState = {
   availableVersion: null
 };
 
+const AI_CONFIG_FILE_NAME = 'ai.secrets.json';
+
+const getAiConfigPath = () => path.join(app.getPath('userData'), 'config', AI_CONFIG_FILE_NAME);
+
+const ensureAiConfigDirectory = () => {
+  fs.mkdirSync(path.dirname(getAiConfigPath()), { recursive: true });
+};
+
+const readAiConfig = () => {
+  const configPath = getAiConfigPath();
+  if (!fs.existsSync(configPath)) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  } catch (error) {
+    console.error('Failed to read AI config file:', error);
+    return {};
+  }
+};
+
+const getAiConfigState = () => {
+  const fileValue = readAiConfig()?.Gemini?.ApiKey;
+  const hasFileValue = typeof fileValue === 'string' && fileValue.trim().length > 0;
+
+  return {
+    configured: hasFileValue,
+    configPath: getAiConfigPath(),
+    source: hasFileValue ? 'file' : 'none'
+  };
+};
+
+const writeAiConfig = (geminiApiKey) => {
+  ensureAiConfigDirectory();
+
+  const payload = {
+    Gemini: {
+      ApiKey: String(geminiApiKey || '').trim()
+    }
+  };
+
+  fs.writeFileSync(getAiConfigPath(), JSON.stringify(payload, null, 2));
+  if (process.platform !== 'win32') {
+    fs.chmodSync(getAiConfigPath(), 0o600);
+  }
+
+  return getAiConfigState();
+};
+
+const clearAiConfig = () => {
+  const configPath = getAiConfigPath();
+  if (fs.existsSync(configPath)) {
+    fs.rmSync(configPath, { force: true });
+  }
+
+  return getAiConfigState();
+};
+
 const getIndexHtmlPath = () => path.join(app.getAppPath(), 'dist', 'index.html');
 
 const getBackendExecutablePath = () => {
@@ -227,7 +286,11 @@ const startBackend = () => {
       ['run', '--project', projectPath, '--urls', BACKEND_URL],
       {
         cwd: app.getAppPath(),
-        env: { ...process.env, ASPNETCORE_URLS: BACKEND_URL },
+        env: {
+          ...process.env,
+          ASPNETCORE_URLS: BACKEND_URL,
+          DATATOOLKIT_CONFIG_PATH: getAiConfigPath()
+        },
         stdio: 'inherit'
       }
     );
@@ -241,7 +304,11 @@ const startBackend = () => {
   }
 
   backendProcess = spawn(executablePath, [], {
-    env: { ...process.env, ASPNETCORE_URLS: BACKEND_URL },
+    env: {
+      ...process.env,
+      ASPNETCORE_URLS: BACKEND_URL,
+      DATATOOLKIT_CONFIG_PATH: getAiConfigPath()
+    },
     stdio: 'ignore'
   });
   refreshTrayMenu();
@@ -355,8 +422,13 @@ ipcMain.handle('backend:generate', async (_event, payload) => {
 });
 
 ipcMain.handle('shell:openExternal', async (_event, targetUrl) => {
-  if (typeof targetUrl === 'string' && targetUrl.startsWith('http')) {
-    await shell.openExternal(targetUrl);
+  try {
+    const candidate = new URL(String(targetUrl || ''));
+    if (candidate.protocol === 'http:' || candidate.protocol === 'https:') {
+      await shell.openExternal(candidate.toString());
+    }
+  } catch (error) {
+    console.error('Rejected external URL:', error);
   }
 });
 
@@ -368,6 +440,51 @@ ipcMain.handle('desktop:getSettings', async () => {
     platform: process.platform,
     appVersion: app.getVersion()
   };
+});
+
+ipcMain.handle('desktop:getAiConfig', async () => {
+  return getAiConfigState();
+});
+
+ipcMain.handle('desktop:saveAiConfig', async (_event, payload) => {
+  const geminiApiKey = String(payload?.geminiApiKey || '').trim();
+  if (!geminiApiKey) {
+    return {
+      ok: false,
+      error: 'Gemini API key is required.',
+      ...getAiConfigState()
+    };
+  }
+
+  try {
+    const nextState = writeAiConfig(geminiApiKey);
+    return {
+      ok: true,
+      ...nextState
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to save AI config.',
+      ...getAiConfigState()
+    };
+  }
+});
+
+ipcMain.handle('desktop:clearAiConfig', async () => {
+  try {
+    const nextState = clearAiConfig();
+    return {
+      ok: true,
+      ...nextState
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to clear AI config.',
+      ...getAiConfigState()
+    };
+  }
 });
 
 ipcMain.handle('desktop:setWakeupShortcut', async (_event, accelerator) => {

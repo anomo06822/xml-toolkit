@@ -1,0 +1,16 @@
+.git
+.gitignore
+node_modules
+dist
+dist-ssr
+build
+release
+backend/publish
+backend/**/bin
+backend/**/obj
+.env
+.env.local
+.env.*.local
+backend/DataToolkit.Api/appsettings.Local.json
+config/backend/*.json
+!config/backend/*.example.json

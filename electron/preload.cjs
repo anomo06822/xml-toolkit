@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   desktop: {
     getSettings: () => ipcRenderer.invoke('desktop:getSettings'),
+    getAiConfig: () => ipcRenderer.invoke('desktop:getAiConfig'),
+    saveAiConfig: (payload) => ipcRenderer.invoke('desktop:saveAiConfig', payload),
+    clearAiConfig: () => ipcRenderer.invoke('desktop:clearAiConfig'),
     setWakeupShortcut: (accelerator) => ipcRenderer.invoke('desktop:setWakeupShortcut', accelerator),
     wakeup: () => ipcRenderer.invoke('desktop:wakeup'),
     getUpdaterState: () => ipcRenderer.invoke('desktop:getUpdaterState'),
