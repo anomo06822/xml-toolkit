@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, Tray, globalShortcut, ipcMain, nativeImage, shell } = require('electron');
+const { app, BrowserWindow, Menu, Tray, globalShortcut, ipcMain, nativeImage, safeStorage, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -44,23 +44,52 @@ const readAiConfig = () => {
   }
 };
 
+const getStoredGeminiApiKey = () => {
+  const config = readAiConfig();
+  const encryptedValue = config?.Gemini?.ApiKeyEncrypted;
+  if (typeof encryptedValue === 'string' && encryptedValue.trim()) {
+    try {
+      if (!safeStorage.isEncryptionAvailable()) {
+        throw new Error('OS protected storage is not available on this device.');
+      }
+
+      return safeStorage.decryptString(Buffer.from(encryptedValue, 'base64'));
+    } catch (error) {
+      console.error('Failed to decrypt stored Gemini API key:', error);
+      return '';
+    }
+  }
+
+  const legacyValue = config?.Gemini?.ApiKey;
+  return typeof legacyValue === 'string' ? legacyValue.trim() : '';
+};
+
 const getAiConfigState = () => {
-  const fileValue = readAiConfig()?.Gemini?.ApiKey;
-  const hasFileValue = typeof fileValue === 'string' && fileValue.trim().length > 0;
+  const config = readAiConfig();
+  const encryptedValue = config?.Gemini?.ApiKeyEncrypted;
+  const legacyValue = config?.Gemini?.ApiKey;
+  const hasEncryptedValue = typeof encryptedValue === 'string' && encryptedValue.trim().length > 0;
+  const hasLegacyValue = typeof legacyValue === 'string' && legacyValue.trim().length > 0;
 
   return {
-    configured: hasFileValue,
+    configured: hasEncryptedValue || hasLegacyValue,
     configPath: getAiConfigPath(),
-    source: hasFileValue ? 'file' : 'none'
+    source: hasEncryptedValue ? 'os-protected' : hasLegacyValue ? 'legacy-file' : 'none'
   };
 };
 
 const writeAiConfig = (geminiApiKey) => {
+  if (!safeStorage.isEncryptionAvailable()) {
+    throw new Error('OS protected storage is unavailable. Unable to store Gemini API key securely.');
+  }
+
   ensureAiConfigDirectory();
+  const encryptedValue = safeStorage.encryptString(String(geminiApiKey || '').trim()).toString('base64');
 
   const payload = {
+    version: 2,
     Gemini: {
-      ApiKey: String(geminiApiKey || '').trim()
+      ApiKeyEncrypted: encryptedValue
     }
   };
 
@@ -82,6 +111,19 @@ const clearAiConfig = () => {
 };
 
 const getIndexHtmlPath = () => path.join(app.getAppPath(), 'dist', 'index.html');
+
+const resolveExternalUrl = (candidate) => {
+  try {
+    const normalized = new URL(String(candidate || ''));
+    if (normalized.protocol === 'http:' || normalized.protocol === 'https:') {
+      return normalized.toString();
+    }
+  } catch (error) {
+    console.error('Rejected external URL:', error);
+  }
+
+  return null;
+};
 
 const getBackendExecutablePath = () => {
   const executableName = process.platform === 'win32' ? 'DataToolkit.Api.exe' : 'DataToolkit.Api';
@@ -289,7 +331,7 @@ const startBackend = () => {
         env: {
           ...process.env,
           ASPNETCORE_URLS: BACKEND_URL,
-          DATATOOLKIT_CONFIG_PATH: getAiConfigPath()
+          GEMINI_API_KEY: getStoredGeminiApiKey() || process.env.GEMINI_API_KEY || ''
         },
         stdio: 'inherit'
       }
@@ -307,7 +349,7 @@ const startBackend = () => {
     env: {
       ...process.env,
       ASPNETCORE_URLS: BACKEND_URL,
-      DATATOOLKIT_CONFIG_PATH: getAiConfigPath()
+      GEMINI_API_KEY: getStoredGeminiApiKey() || process.env.GEMINI_API_KEY || ''
     },
     stdio: 'ignore'
   });
@@ -334,13 +376,16 @@ const createWindow = async () => {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: true
     }
   });
   mainWindowRef = mainWindow;
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    const externalUrl = resolveExternalUrl(url);
+    if (externalUrl) {
+      void shell.openExternal(externalUrl);
+    }
     return { action: 'deny' };
   });
 
@@ -422,13 +467,9 @@ ipcMain.handle('backend:generate', async (_event, payload) => {
 });
 
 ipcMain.handle('shell:openExternal', async (_event, targetUrl) => {
-  try {
-    const candidate = new URL(String(targetUrl || ''));
-    if (candidate.protocol === 'http:' || candidate.protocol === 'https:') {
-      await shell.openExternal(candidate.toString());
-    }
-  } catch (error) {
-    console.error('Rejected external URL:', error);
+  const externalUrl = resolveExternalUrl(targetUrl);
+  if (externalUrl) {
+    await shell.openExternal(externalUrl);
   }
 });
 

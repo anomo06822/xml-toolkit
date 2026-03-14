@@ -12,6 +12,17 @@ const HISTORY_KEY = `${STORAGE_PREFIX}history`;
 const GEMINI_API_LOGS_KEY = `${STORAGE_PREFIX}gemini_api_logs`;
 const AI_CONTEXT_KEY = `${STORAGE_PREFIX}ai_context`;
 const GEMINI_UPLOAD_HISTORY_KEY = `${STORAGE_PREFIX}gemini_upload_history`;
+const AI_SENSITIVE_EXPORT_KEYS = new Set([
+  GEMINI_API_LOGS_KEY,
+  AI_CONTEXT_KEY,
+  GEMINI_UPLOAD_HISTORY_KEY,
+  `${STORAGE_PREFIX}gemini_messages`,
+  `${STORAGE_PREFIX}gemini_include_context`,
+  `${STORAGE_PREFIX}gemini_include_context_formats`,
+  `${STORAGE_PREFIX}gemini_system_prompt`,
+  `${STORAGE_PREFIX}gemini_custom_prompt`,
+  `${STORAGE_PREFIX}gemini_prompt_presets`
+]);
 
 // ============================================
 // Templates Management
@@ -153,6 +164,7 @@ export interface AppSettings {
   fontSize: number;
   showLineNumbers: boolean;
   geminiModel: GeminiModel;
+  persistAiLogs: boolean;
   globalWakeupShortcut: string;
 }
 
@@ -188,6 +200,7 @@ const defaultSettings: AppSettings = {
   fontSize: 14,
   showLineNumbers: true,
   geminiModel: DEFAULT_GEMINI_MODEL,
+  persistAiLogs: false,
   globalWakeupShortcut: 'CommandOrControl+Shift+Space'
 };
 
@@ -197,7 +210,17 @@ const sanitizeSettingsPayload = (value: unknown): Partial<AppSettings> => {
   }
 
   const { geminiToken: _legacyGeminiToken, ...rest } = value as Record<string, unknown>;
-  return rest as Partial<AppSettings>;
+  const sanitized = rest as Partial<AppSettings>;
+  if ('persistAiLogs' in sanitized && typeof sanitized.persistAiLogs !== 'boolean') {
+    delete sanitized.persistAiLogs;
+  }
+  return sanitized;
+};
+
+const pruneAiSensitiveLocalData = (settings: AppSettings) => {
+  if (!settings.persistAiLogs) {
+    localStorage.removeItem(GEMINI_API_LOGS_KEY);
+  }
 };
 
 export const getSettings = (): AppSettings => {
@@ -210,11 +233,19 @@ export const getSettings = (): AppSettings => {
     const parsed = JSON.parse(data);
     const sanitized = sanitizeSettingsPayload(parsed);
 
-    if (parsed && typeof parsed === 'object' && 'geminiToken' in parsed) {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...defaultSettings, ...sanitized }));
+    const resolvedSettings = { ...defaultSettings, ...sanitized };
+
+    if (
+      parsed && typeof parsed === 'object' && (
+        'geminiToken' in parsed ||
+        !('persistAiLogs' in (parsed as Record<string, unknown>))
+      )
+    ) {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(resolvedSettings));
     }
 
-    return { ...defaultSettings, ...sanitized };
+    pruneAiSensitiveLocalData(resolvedSettings);
+    return resolvedSettings;
   } catch (e) {
     console.error('Failed to load settings:', e);
     return defaultSettings;
@@ -225,11 +256,13 @@ export const updateSettings = (updates: Partial<AppSettings>): AppSettings => {
   const current = getSettings();
   const updated = { ...current, ...updates };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
+  pruneAiSensitiveLocalData(updated);
   return updated;
 };
 
 export const resetSettings = (): AppSettings => {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(defaultSettings));
+  pruneAiSensitiveLocalData(defaultSettings);
   return defaultSettings;
 };
 
@@ -303,6 +336,11 @@ export interface GeminiApiLogEntry {
 const MAX_GEMINI_API_LOGS = 100;
 
 export const getGeminiApiLogs = (): GeminiApiLogEntry[] => {
+  if (!getSettings().persistAiLogs) {
+    localStorage.removeItem(GEMINI_API_LOGS_KEY);
+    return [];
+  }
+
   try {
     const data = localStorage.getItem(GEMINI_API_LOGS_KEY);
     return data ? JSON.parse(data) : [];
@@ -315,12 +353,17 @@ export const getGeminiApiLogs = (): GeminiApiLogEntry[] => {
 export const addGeminiApiLog = (
   log: Omit<GeminiApiLogEntry, 'id' | 'timestamp'>
 ): GeminiApiLogEntry => {
+  const persistAiLogs = getSettings().persistAiLogs;
   const logs = getGeminiApiLogs();
   const newLog: GeminiApiLogEntry = {
     ...log,
     id: crypto.randomUUID(),
     timestamp: Date.now()
   };
+
+  if (!persistAiLogs) {
+    return newLog;
+  }
 
   logs.unshift(newLog);
   if (logs.length > MAX_GEMINI_API_LOGS) {
@@ -461,7 +504,7 @@ export const exportAllData = (): string => {
   const data: Record<string, any> = {};
   
   Object.keys(localStorage).forEach(key => {
-    if (key.startsWith(STORAGE_PREFIX)) {
+    if (key.startsWith(STORAGE_PREFIX) && !AI_SENSITIVE_EXPORT_KEYS.has(key)) {
       try {
         const parsed = JSON.parse(localStorage.getItem(key) || '');
         data[key] = key === SETTINGS_KEY ? sanitizeSettingsPayload(parsed) : parsed;
@@ -479,7 +522,7 @@ export const importData = (jsonStr: string): boolean => {
     const data = JSON.parse(jsonStr);
     
     for (const [key, value] of Object.entries(data)) {
-      if (key.startsWith(STORAGE_PREFIX)) {
+      if (key.startsWith(STORAGE_PREFIX) && !AI_SENSITIVE_EXPORT_KEYS.has(key)) {
         const sanitizedValue = key === SETTINGS_KEY ? sanitizeSettingsPayload(value) : value;
         localStorage.setItem(key, JSON.stringify(sanitizedValue));
       }

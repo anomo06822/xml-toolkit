@@ -129,7 +129,7 @@ export const SettingsPage: React.FC = () => {
     if (result.ok) {
       setDesktopGeminiApiKey('');
       setDesktopAiConfig(result);
-      setDesktopAiStatus(`Saved to ${result.configPath}`);
+      setDesktopAiStatus(`Saved to ${result.configPath} using OS-protected storage.`);
     } else {
       setDesktopAiStatus(`Failed: ${result.error || 'Unable to save AI config.'}`);
     }
@@ -155,7 +155,8 @@ export const SettingsPage: React.FC = () => {
   };
 
   const describeAiSource = (source?: ElectronAiConfigState['source']) => {
-    if (source === 'file') return 'local file';
+    if (source === 'os-protected') return 'OS-protected local config';
+    if (source === 'legacy-file') return 'legacy plaintext local file';
     return 'not configured';
   };
   
@@ -308,13 +309,31 @@ export const SettingsPage: React.FC = () => {
             </select>
           </div>
 
+          <div className="flex justify-between items-center gap-4">
+            <div>
+              <label className="text-sm font-medium text-slate-300">Persist AI Request Logs</label>
+              <p className="text-xs text-slate-500">
+                Off by default. When enabled, only summarized Gemini request metadata is stored locally and never included in export/import.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.persistAiLogs}
+                onChange={(e) => handleChange('persistAiLogs', e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-700 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+
           {isElectron ? (
             <div className="space-y-3 rounded-lg border border-slate-700 bg-slate-900/40 p-4">
               <div className="flex justify-between items-start gap-4">
                 <div>
                   <label className="text-sm font-medium text-slate-300">Desktop Backend Secret</label>
                   <p className="text-xs text-slate-500">
-                    Stored outside the app bundle in a local JSON file and excluded from export/import.
+                    Stored outside the app bundle in an OS-protected local config file and excluded from export/import.
                   </p>
                 </div>
                 <input
@@ -332,6 +351,12 @@ export const SettingsPage: React.FC = () => {
                 <div>Configured: <span className="text-slate-300">{desktopAiConfig?.configured ? 'yes' : 'no'}</span></div>
               </div>
 
+              {desktopAiConfig?.source === 'legacy-file' && (
+                <p className="text-xs text-amber-300">
+                  A legacy plaintext token file was detected. Save the token again to migrate it into OS-protected storage.
+                </p>
+              )}
+
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => { void handleSaveDesktopAiConfig(); }}>
                   Save Backend Token
@@ -340,7 +365,7 @@ export const SettingsPage: React.FC = () => {
                   variant="secondary"
                   size="sm"
                   onClick={() => { void handleClearDesktopAiConfig(); }}
-                  disabled={desktopAiConfig?.source !== 'file'}
+                  disabled={!desktopAiConfig?.configured}
                   icon={<Trash2 size={14} />}
                 >
                   Clear Stored Token
@@ -451,7 +476,7 @@ export const SettingsPage: React.FC = () => {
           <div className="flex justify-between items-center">
             <div>
               <label className="text-sm font-medium text-slate-300">Export Data</label>
-              <p className="text-xs text-slate-500">Download templates and settings. Secrets stored outside local storage are excluded.</p>
+              <p className="text-xs text-slate-500">Download templates and settings. Desktop secrets and AI conversation/log context stay out of backup files.</p>
             </div>
             <Button variant="secondary" size="sm" onClick={handleExport} icon={<Download size={14} />}>
               Export

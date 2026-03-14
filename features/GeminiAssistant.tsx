@@ -31,6 +31,7 @@ interface PromptPreset {
 }
 
 type ContextFormat = DataFormat | 'text';
+const LOG_PREVIEW_LIMIT = 240;
 
 const DEFAULT_SYSTEM_PROMPT = `You are an expert in data formats including XML, JSON, and Markdown.
 You help users with:
@@ -97,6 +98,14 @@ export const GeminiAssistant: React.FC = () => {
     setPersistentValue(PROMPT_PRESETS_KEY, presets);
   };
 
+  const createPreview = (content: string, limit = LOG_PREVIEW_LIMIT): string => {
+    const normalized = content.trim();
+    if (!normalized) return '';
+    return normalized.length > limit
+      ? `${normalized.slice(0, limit)}...[truncated ${normalized.length - limit} chars]`
+      : normalized;
+  };
+
   const buildContextSection = (): string => {
     const MAX_CONTEXT_LENGTH = 4000;
     const clip = (content?: string) => {
@@ -154,8 +163,22 @@ ${textSection}`;
         source: 'assistant',
         model,
         provider: result.provider,
-        requestBody: JSON.stringify(requestBody, null, 2),
-        responseBody: JSON.stringify({ provider: result.provider, text: result.text || '' }, null, 2),
+        requestBody: JSON.stringify({
+          model,
+          includeContext,
+          includedFormats: Object.entries(includeContextFormats)
+            .filter(([, enabled]) => enabled)
+            .map(([format]) => format),
+          systemPromptChars: systemPrompt.length,
+          customPromptChars: customPrompt.trim().length,
+          promptChars: requestBody.contents.length,
+          promptPreview: createPreview(input)
+        }, null, 2),
+        responseBody: JSON.stringify({
+          provider: result.provider,
+          textChars: (result.text || '').length,
+          textPreview: createPreview(result.text || '')
+        }, null, 2),
         success: true
       });
 
@@ -179,7 +202,10 @@ ${textSection}`;
         source: 'assistant',
         model: getGeminiModel(),
         provider: window.electronAPI?.isElectron ? 'electron-backend' : 'http-backend',
-        requestBody: JSON.stringify({ prompt: input }, null, 2),
+        requestBody: JSON.stringify({
+          promptChars: input.length,
+          promptPreview: createPreview(input)
+        }, null, 2),
         error: e?.message || 'Unknown error',
         success: false
       });

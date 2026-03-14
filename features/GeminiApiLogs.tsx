@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '../components/Button';
-import { clearGeminiApiLogs, GeminiApiLogEntry, getGeminiApiLogs } from '../services';
+import { clearGeminiApiLogs, GeminiApiLogEntry, getGeminiApiLogs, getSettings } from '../services';
 import { RefreshCw, Trash2 } from 'lucide-react';
 
 export const GeminiApiLogs: React.FC = () => {
   const [logs, setLogs] = useState<GeminiApiLogEntry[]>([]);
+  const [persistAiLogs, setPersistAiLogs] = useState<boolean>(() => getSettings().persistAiLogs);
 
   const reloadLogs = () => {
+    setPersistAiLogs(getSettings().persistAiLogs);
     setLogs(getGeminiApiLogs());
   };
 
@@ -27,20 +29,24 @@ export const GeminiApiLogs: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold text-slate-100">Gemini API Logs</h2>
           <p className="text-sm text-slate-400">
-            View request/response bodies for Gemini calls from Assistant and Diff Summary.
+            View summarized Gemini request metadata for Assistant and Diff Summary calls.
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={reloadLogs} icon={<RefreshCw size={14} />}>
             Refresh
           </Button>
-          <Button variant="danger" onClick={handleClearLogs} icon={<Trash2 size={14} />}>
+          <Button variant="danger" onClick={handleClearLogs} icon={<Trash2 size={14} />} disabled={!persistAiLogs || logs.length === 0}>
             Clear Logs
           </Button>
         </div>
       </div>
 
-      {logs.length === 0 ? (
+      {!persistAiLogs ? (
+        <div className="bg-surface border border-slate-700 rounded-lg p-8 text-center text-slate-500">
+          Logging is disabled. Enable <span className="text-slate-300">Persist AI Request Logs</span> in Settings to keep local request summaries.
+        </div>
+      ) : logs.length === 0 ? (
         <div className="bg-surface border border-slate-700 rounded-lg p-8 text-center text-slate-500">
           No logs yet. Make a Gemini request in AI Assistant or Diff Summary first.
         </div>
@@ -60,13 +66,13 @@ export const GeminiApiLogs: React.FC = () => {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">Request Body</div>
+                  <div className="text-xs text-slate-400 mb-1">Request Summary</div>
                   <pre className="bg-[#0f172a] border border-slate-700 rounded-lg p-3 text-xs text-slate-200 overflow-auto max-h-80 whitespace-pre-wrap break-all">
                     {log.requestBody}
                   </pre>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">Response Body</div>
+                  <div className="text-xs text-slate-400 mb-1">Response Summary</div>
                   <pre className="bg-[#0f172a] border border-slate-700 rounded-lg p-3 text-xs text-slate-200 overflow-auto max-h-80 whitespace-pre-wrap break-all">
                     {log.responseBody || log.error || '(empty)'}
                   </pre>

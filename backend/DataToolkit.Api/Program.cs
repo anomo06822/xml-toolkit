@@ -35,6 +35,7 @@ app.MapPost("/api/ai/generate", async (
     GenerateRequest request,
     IHttpClientFactory httpClientFactory,
     IOptions<GeminiOptions> geminiOptions,
+    IConfiguration configuration,
     CancellationToken cancellationToken) =>
 {
     if (string.IsNullOrWhiteSpace(request.Model) || string.IsNullOrWhiteSpace(request.Contents))
@@ -42,7 +43,7 @@ app.MapPost("/api/ai/generate", async (
         return Results.BadRequest(new { error = "model and contents are required" });
     }
 
-    var apiKey = geminiOptions.Value.ApiKey;
+    var apiKey = geminiOptions.Value.ApiKey ?? configuration["GEMINI_API_KEY"];
     if (string.IsNullOrWhiteSpace(apiKey))
     {
         return Results.Problem(

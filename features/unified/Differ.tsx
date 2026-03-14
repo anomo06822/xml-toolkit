@@ -20,6 +20,7 @@ const SAMPLE_DIFF_RIGHT = `{
   "value": 2,
   "extra": true
 }`;
+const LOG_PREVIEW_LIMIT = 240;
 
 // Format badge component
 const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ format, confidence }) => {
@@ -61,6 +62,13 @@ export const UnifiedDiffer: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [aiSummaryText, setAiSummaryText] = useState<string | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const createPreview = (content: string, limit = LOG_PREVIEW_LIMIT): string => {
+    const normalized = content.trim();
+    if (!normalized) return '';
+    return normalized.length > limit
+      ? `${normalized.slice(0, limit)}...[truncated ${normalized.length - limit} chars]`
+      : normalized;
+  };
   
   // Auto-detect format from left content
   useEffect(() => {
@@ -133,8 +141,20 @@ Please provide a clear, technical summary of the changes:`;
         source: 'diff-summary',
         model,
         provider: response.provider,
-        requestBody: JSON.stringify(requestBody, null, 2),
-        responseBody: JSON.stringify({ provider: response.provider, text: response.text || '' }, null, 2),
+        requestBody: JSON.stringify({
+          model,
+          format: detectedFormat.format,
+          promptChars: requestBody.contents.length,
+          addedLines: diff.stats.added,
+          removedLines: diff.stats.removed,
+          addedPreview: createPreview(addedLines),
+          removedPreview: createPreview(removedLines)
+        }, null, 2),
+        responseBody: JSON.stringify({
+          provider: response.provider,
+          textChars: (response.text || '').length,
+          textPreview: createPreview(response.text || '')
+        }, null, 2),
         success: true
       });
       
@@ -145,7 +165,11 @@ Please provide a clear, technical summary of the changes:`;
         source: 'diff-summary',
         model: getGeminiModel(),
         provider: window.electronAPI?.isElectron ? 'electron-backend' : 'http-backend',
-        requestBody: JSON.stringify({ format: detectedFormat.format }, null, 2),
+        requestBody: JSON.stringify({
+          format: detectedFormat.format,
+          leftChars: leftContent.length,
+          rightChars: rightContent.length
+        }, null, 2),
         error: error?.message || 'Unknown error',
         success: false
       });

@@ -24,7 +24,7 @@ declare global {
   interface ElectronAiConfigState {
     configured: boolean;
     configPath: string;
-    source: 'file' | 'none';
+    source: 'os-protected' | 'legacy-file' | 'none';
   }
 
   interface ElectronAiConfigMutationResult extends ElectronAiConfigState {
