@@ -105,11 +105,11 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background text-slate-200 font-sans selection:bg-blue-500/30">
+    <div className="app-shell flex h-screen w-screen overflow-hidden bg-background text-slate-200 font-sans selection:bg-primary/20">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 border-b border-slate-800 flex items-center justify-between px-8 bg-background/50 backdrop-blur-sm z-10">
+        <header className="app-header h-16 border-b flex items-center justify-between px-8 backdrop-blur-xl z-10">
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <span>DataToolkit</span>
             {appVersion && (
@@ -124,9 +124,9 @@ const App: React.FC = () => {
           
           {/* Format badges */}
           <div className="flex items-center gap-2">
-            <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-medium">XML</span>
-            <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded font-medium">JSON</span>
-            <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded font-medium">Markdown</span>
+            <span className="format-pill format-pill-xml">XML</span>
+            <span className="format-pill format-pill-json">JSON</span>
+            <span className="format-pill format-pill-markdown">Markdown</span>
           </div>
         </header>
 

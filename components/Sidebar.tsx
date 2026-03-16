@@ -95,10 +95,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
   };
 
   return (
-    <div className="w-64 bg-surface border-r border-slate-700 flex flex-col">
+    <div className="w-64 bg-surface/95 border-r border-slate-700/80 backdrop-blur-xl flex flex-col">
       {/* Logo */}
       <div className="p-6 flex items-center gap-3 border-b border-slate-700">
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center text-white shadow-lg">
+        <div className="w-10 h-10 bg-gradient-to-br from-[#8e6547] via-primary to-[#5e4535] rounded-xl flex items-center justify-center text-white shadow-[0_18px_40px_rgba(200,123,72,0.18)]">
           <FileCode size={22} />
         </div>
         <div>
@@ -121,7 +121,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
               w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group
               ${activeTab === item.id 
                 ? item.highlight 
-                  ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
+                  ? 'bg-primary/10 text-primary border border-primary/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]' 
                   : 'bg-primary/10 text-primary border border-primary/20' 
                 : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200 border border-transparent'
               }
@@ -129,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
           >
             <span className={`
               ${activeTab === item.id 
-                ? (item.highlight ? 'text-purple-400' : 'text-primary') 
+                ? (item.highlight ? 'text-primary' : 'text-primary') 
                 : 'text-slate-500 group-hover:text-slate-300'
               }
             `}>
@@ -183,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         </button>
         
         {/* Storage Info */}
-        <div className="bg-slate-900/50 rounded-lg p-3 text-xs">
+        <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-3 text-xs">
           <div className="flex justify-between items-center mb-2">
             <span className="text-slate-500">Saved Data</span>
             <button

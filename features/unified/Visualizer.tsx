@@ -464,7 +464,7 @@ export const UnifiedVisualizer: React.FC = () => {
         </div>
         
         {/* Visualization Area */}
-        <div className="flex-1 bg-[#162032] border border-slate-700 rounded-lg overflow-hidden relative">
+        <div className="flex-1 bg-editor border border-slate-700 rounded-lg overflow-hidden relative">
           {error ? (
             <div className="text-red-400 p-4 text-center">
               Invalid {detectedFormat.format.toUpperCase()}: {error}

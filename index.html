@@ -10,22 +10,100 @@
     <script>
       tailwind.config = {
         theme: {
+          colors: {
+            transparent: 'transparent',
+            current: 'currentColor',
+            white: '#fffaf4',
+            black: '#0f0c0a',
+            background: 'rgb(var(--dt-bg-rgb) / <alpha-value>)',
+            surface: 'rgb(var(--dt-surface-rgb) / <alpha-value>)',
+            editor: 'rgb(var(--dt-editor-rgb) / <alpha-value>)',
+            gutter: 'rgb(var(--dt-gutter-rgb) / <alpha-value>)',
+            primary: 'rgb(var(--dt-accent-rgb) / <alpha-value>)',
+            secondary: 'rgb(var(--dt-text-secondary-rgb) / <alpha-value>)',
+            accent: 'rgb(var(--dt-accent-strong-rgb) / <alpha-value>)',
+            slate: {
+              50: '#f7f1ea',
+              100: '#efe6db',
+              200: '#d9cdc0',
+              300: '#c1b1a0',
+              400: '#a59280',
+              500: '#897664',
+              600: '#6a5a4d',
+              700: '#4d4037',
+              800: '#302823',
+              900: '#221d18',
+              950: '#161210'
+            },
+            blue: {
+              300: '#cad4d9',
+              400: '#aebdc5',
+              500: '#8799a4',
+              600: '#697a84'
+            },
+            green: {
+              300: '#d5dfca',
+              400: '#b7c6a5',
+              500: '#90a67a',
+              600: '#6f815d'
+            },
+            purple: {
+              300: '#dcc8d1',
+              400: '#b999aa',
+              500: '#947588',
+              600: '#72596a'
+            },
+            red: {
+              300: '#e4c0b7',
+              400: '#d29a8e',
+              500: '#c97a68',
+              600: '#a55e4e',
+              700: '#7a4539'
+            },
+            amber: {
+              300: '#edcfaa',
+              400: '#dbb382',
+              500: '#c87b48',
+              600: '#a86138'
+            }
+          },
           extend: {
-            colors: {
-              background: '#0f172a', // Slate 950
-              surface: '#1e293b', // Slate 800
-              primary: '#3b82f6', // Blue 500
-              secondary: '#64748b', // Slate 500
-              accent: '#f59e0b', // Amber 500
+            boxShadow: {
+              panel: 'var(--dt-shadow-panel)',
+              glow: 'var(--dt-shadow-accent)'
             }
           }
         }
       }
     </script>
     <style>
+      :root {
+        color-scheme: dark;
+        --dt-bg: #13100e;
+        --dt-bg-rgb: 19 16 14;
+        --dt-bg-raised: #181412;
+        --dt-surface: #211b17;
+        --dt-surface-rgb: 33 27 23;
+        --dt-editor: #181310;
+        --dt-editor-rgb: 24 19 16;
+        --dt-gutter: #241d18;
+        --dt-gutter-rgb: 36 29 24;
+        --dt-text: #f3ece3;
+        --dt-text-secondary: #d4c8bc;
+        --dt-text-secondary-rgb: 212 200 188;
+        --dt-text-muted: #9b8d7e;
+        --dt-accent: #c87b48;
+        --dt-accent-rgb: 200 123 72;
+        --dt-accent-strong: #e39a63;
+        --dt-accent-strong-rgb: 227 154 99;
+        --dt-accent-soft: rgba(200, 123, 72, 0.16);
+        --dt-shadow-panel: 0 28px 60px rgba(0, 0, 0, 0.26);
+        --dt-shadow-accent: 0 14px 36px rgba(200, 123, 72, 0.18);
+      }
+
       body { 
-        background-color: #0f172a; 
-        color: #f8fafc; 
+        background-color: var(--dt-bg);
+        color: var(--dt-text);
       }
       
       /* Custom scrollbar */
@@ -34,14 +112,14 @@
         height: 8px; 
       }
       ::-webkit-scrollbar-track { 
-        background: #1e293b; 
+        background: #1b1613; 
       }
       ::-webkit-scrollbar-thumb { 
-        background: #475569; 
+        background: #615449; 
         border-radius: 4px; 
       }
       ::-webkit-scrollbar-thumb:hover { 
-        background: #64748b; 
+        background: #7a6a5d; 
       }
       
       /* Animation utilities */
@@ -61,7 +139,7 @@
       
       /* Selection color */
       ::selection {
-        background-color: rgba(59, 130, 246, 0.3);
+        background-color: var(--dt-accent-soft);
       }
 
     </style>

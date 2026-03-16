@@ -371,7 +371,7 @@ export const SettingsPage: React.FC = () => {
                   Clear Stored Token
                 </Button>
               </div>
-              {desktopAiStatus && <p className="text-xs text-blue-300">{desktopAiStatus}</p>}
+              {desktopAiStatus && <p className="text-xs text-accent">{desktopAiStatus}</p>}
             </div>
           ) : (
             <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-4 text-xs text-slate-400 space-y-2">
@@ -462,7 +462,7 @@ export const SettingsPage: React.FC = () => {
                 <div className="h-full bg-primary" style={{ width: `${Math.round(updaterState.progress)}%` }} />
               </div>
             )}
-            {shortcutStatus && <p className="text-xs text-blue-300">{shortcutStatus}</p>}
+            {shortcutStatus && <p className="text-xs text-accent">{shortcutStatus}</p>}
           </div>
         </section>
       )}

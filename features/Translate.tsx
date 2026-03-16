@@ -264,7 +264,7 @@ ${input}`;
           <textarea
             value={optimizePrompt}
             onChange={(e) => handleOptimizePromptChange(e.target.value)}
-            className="bg-[#0f172a] border border-slate-700 rounded-lg p-2 text-xs text-slate-200 outline-none resize-none h-20"
+            className="bg-editor border border-slate-700 rounded-lg p-2 text-xs text-slate-200 outline-none resize-none h-20"
           />
         </div>
 
@@ -285,7 +285,7 @@ ${input}`;
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Type English or Traditional Chinese... (auto translate in 500ms)"
-              className="flex-1 bg-[#0f172a] border border-slate-700 rounded-lg p-3 text-sm text-slate-200 outline-none resize-none"
+              className="flex-1 bg-editor border border-slate-700 rounded-lg p-3 text-sm text-slate-200 outline-none resize-none"
             />
           </div>
 
@@ -305,7 +305,7 @@ ${input}`;
               value={output}
               readOnly
               placeholder="Translation output..."
-              className="flex-1 bg-[#0f172a] border border-slate-700 rounded-lg p-3 text-sm text-slate-200 outline-none resize-none"
+              className="flex-1 bg-editor border border-slate-700 rounded-lg p-3 text-sm text-slate-200 outline-none resize-none"
             />
             <div className="flex justify-end">
               <Button variant="secondary" onClick={copyOutput} disabled={!output} icon={copied ? <Check size={14} /> : <Copy size={14} />}>
@@ -319,7 +319,7 @@ ${input}`;
           <div className="bg-surface border border-slate-700 rounded-lg p-3 flex flex-col md:flex-row md:items-center gap-2 text-sm">
             <div className="flex items-center gap-2">
               <span className="text-slate-300">IPA:</span>
-              <code className="text-blue-300">{dict.ipa || '(not found)'}</code>
+              <code className="text-accent">{dict.ipa || '(not found)'}</code>
             </div>
             {dict.audioUrl ? (
               <div className="w-full md:w-auto">
@@ -358,7 +358,7 @@ ${input}`;
             <textarea
               value={optimizedEnglish}
               readOnly
-              className="w-full h-28 bg-[#0f172a] border border-slate-700 rounded-lg p-3 text-sm text-slate-200 outline-none resize-none"
+              className="w-full h-28 bg-editor border border-slate-700 rounded-lg p-3 text-sm text-slate-200 outline-none resize-none"
             />
             <div className="flex justify-end">
               <Button variant="secondary" onClick={() => setInput(optimizedEnglish)}>
@@ -396,7 +396,7 @@ ${input}`;
                 {item.sourceLang} → {item.targetLang} • {new Date(item.timestamp).toLocaleString()}
               </div>
               <div className="text-xs text-slate-300 truncate">{item.input}</div>
-              <div className="text-xs text-blue-300 truncate">{item.output}</div>
+              <div className="text-xs text-accent truncate">{item.output}</div>
             </button>
           ))}
         </div>

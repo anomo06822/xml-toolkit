@@ -301,14 +301,14 @@ Please provide a clear, technical summary of the changes:`;
           
           <div className="w-px bg-slate-700 mx-2" />
           
-          <label className="flex items-center gap-2 text-sm text-purple-300 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
             <input
               type="checkbox"
               checked={options.aiSummary}
               onChange={e => setOptions({ ...options, aiSummary: e.target.checked })}
-              className="rounded border-purple-600 text-purple-500 focus:ring-purple-500 bg-slate-800"
+              className="rounded border-slate-600 text-primary focus:ring-primary bg-slate-800"
             />
-            <Sparkles size={14} className="text-purple-400" />
+            <Sparkles size={14} className="text-primary" />
             AI Summary (Gemini)
           </label>
         </div>
@@ -356,7 +356,7 @@ Please provide a clear, technical summary of the changes:`;
                 </div>
                 <button
                   onClick={handleCopyDiff}
-                  className="text-xs text-primary hover:text-blue-400 flex items-center gap-1"
+                  className="text-xs text-primary hover:text-accent flex items-center gap-1"
                 >
                   {copied ? <Check size={12} /> : <Copy size={12} />}
                   {copied ? 'Copied!' : 'Copy'}
@@ -367,13 +367,13 @@ Please provide a clear, technical summary of the changes:`;
           
           {/* AI Summary Panel */}
           {(isLoadingSummary || aiSummaryText) && (
-            <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2">
-                <Sparkles size={14} className="text-purple-400" />
-                <span className="text-xs font-medium text-purple-300">AI Summary</span>
+                <Sparkles size={14} className="text-primary" />
+                <span className="text-xs font-medium text-slate-200">AI Summary</span>
               </div>
               {isLoadingSummary ? (
-                <div className="flex items-center gap-2 text-sm text-purple-300">
+                <div className="flex items-center gap-2 text-sm text-primary">
                   <Loader2 size={14} className="animate-spin" />
                   Analyzing differences...
                 </div>
@@ -383,7 +383,7 @@ Please provide a clear, technical summary of the changes:`;
             </div>
           )}
           
-          <div className="flex-1 bg-[#162032] border border-slate-700 rounded-lg overflow-auto p-4 font-mono text-sm">
+          <div className="flex-1 bg-editor border border-slate-700 rounded-lg overflow-auto p-4 font-mono text-sm">
             {!diffResult ? (
               <div className="text-slate-500 text-center mt-20">
                 Click Compare to see differences

@@ -161,10 +161,10 @@ export const UnifiedConverter: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex items-center gap-2 rounded-xl border border-slate-600/40 bg-[#172236] p-1.5 shadow-inner">
+        <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
           <Button
             onClick={handleConvertForward}
-            className="gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_18px_rgba(59,130,246,0.32)] hover:from-blue-400 hover:to-blue-500"
+            className="gap-2 rounded-lg bg-gradient-to-r from-primary to-[#8b5f43] px-4 py-2 text-sm font-semibold text-white shadow-glow hover:from-accent hover:to-[#9b6a49]"
           >
             <ArrowRight size={14} />
             <span>Convert ({formatShortcut('Enter')})</span>
@@ -209,7 +209,7 @@ export const UnifiedConverter: React.FC = () => {
             <div className="flex gap-2">
               <button
                 onClick={handleFormatInput}
-                className="text-xs text-primary hover:text-blue-400 px-2 py-1 rounded hover:bg-primary/10"
+                className="text-xs text-primary hover:text-accent px-2 py-1 rounded hover:bg-primary/10"
               >
                 Format
               </button>
@@ -250,13 +250,13 @@ export const UnifiedConverter: React.FC = () => {
               <div className="flex gap-1">
                 <button
                   onClick={handleDownload}
-                  className="text-xs text-primary hover:text-blue-400 flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10"
+                  className="text-xs text-primary hover:text-accent flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10"
                 >
                   <Download size={12} /> Download
                 </button>
                 <button
                   onClick={handleCopy}
-                  className="text-xs text-primary hover:text-blue-400 flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10"
+                  className="text-xs text-primary hover:text-accent flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10"
                 >
                   {copied ? <Check size={12} /> : <Copy size={12} />}
                   {copied ? 'Copied!' : 'Copy'}
@@ -264,7 +264,7 @@ export const UnifiedConverter: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="flex-1 bg-[#162032] border border-slate-700 rounded-lg overflow-hidden">
+          <div className="flex-1 bg-editor border border-slate-700 rounded-lg overflow-hidden">
             <CodeEditor
               value={output}
               onChange={setOutput}

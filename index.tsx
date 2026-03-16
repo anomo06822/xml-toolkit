@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import 'github-markdown-css/github-markdown-dark.css';
 import './styles/markdown.css';
+import './styles/theme.css';
 import App from './App';
 
 const rootElement = document.getElementById('root');

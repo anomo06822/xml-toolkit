@@ -58,7 +58,7 @@ export const GeminiApiLogs: React.FC = () => {
                 <span className={`px-2 py-0.5 rounded font-medium ${log.success ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
                   {log.success ? 'SUCCESS' : 'ERROR'}
                 </span>
-                <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">{log.source}</span>
+                <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">{log.source}</span>
                 <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300">{log.model}</span>
                 <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400">provider: {log.provider}</span>
                 <span className="text-slate-500">{new Date(log.timestamp).toLocaleString()}</span>
@@ -67,13 +67,13 @@ export const GeminiApiLogs: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <div>
                   <div className="text-xs text-slate-400 mb-1">Request Summary</div>
-                  <pre className="bg-[#0f172a] border border-slate-700 rounded-lg p-3 text-xs text-slate-200 overflow-auto max-h-80 whitespace-pre-wrap break-all">
+                  <pre className="bg-editor border border-slate-700 rounded-lg p-3 text-xs text-slate-200 overflow-auto max-h-80 whitespace-pre-wrap break-all">
                     {log.requestBody}
                   </pre>
                 </div>
                 <div>
                   <div className="text-xs text-slate-400 mb-1">Response Summary</div>
-                  <pre className="bg-[#0f172a] border border-slate-700 rounded-lg p-3 text-xs text-slate-200 overflow-auto max-h-80 whitespace-pre-wrap break-all">
+                  <pre className="bg-editor border border-slate-700 rounded-lg p-3 text-xs text-slate-200 overflow-auto max-h-80 whitespace-pre-wrap break-all">
                     {log.responseBody || log.error || '(empty)'}
                   </pre>
                 </div>

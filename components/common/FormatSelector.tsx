@@ -31,7 +31,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
   const textSize = size === 'sm' ? 'text-[10px]' : 'text-xs';
   
   return (
-    <div className="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
+    <div className="flex bg-slate-900/70 rounded-lg p-1 border border-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       {formats.map(format => (
         <button
           key={format.id}
@@ -40,7 +40,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
           className={`
             ${padding} rounded-md ${textSize} font-medium transition-colors flex items-center gap-1
             ${value === format.id 
-              ? 'bg-primary text-white' 
+              ? 'bg-primary/15 text-slate-100 ring-1 ring-primary/30' 
               : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}

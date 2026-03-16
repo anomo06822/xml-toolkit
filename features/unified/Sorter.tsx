@@ -203,14 +203,14 @@ export const UnifiedSorter: React.FC = () => {
             {output && (
               <button
                 onClick={handleCopy}
-                className="text-xs text-primary hover:text-blue-400 flex items-center gap-1"
+                className="text-xs text-primary hover:text-accent flex items-center gap-1"
               >
                 {copied ? <Check size={12} /> : <Copy size={12} />}
                 {copied ? 'Copied!' : 'Copy'}
               </button>
             )}
           </div>
-          <div className="flex-1 bg-[#162032] border border-slate-700 rounded-lg overflow-hidden">
+          <div className="flex-1 bg-editor border border-slate-700 rounded-lg overflow-hidden">
             <CodeEditor
               value={output}
               format={detectedFormat.format}

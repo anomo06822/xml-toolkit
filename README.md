@@ -2,6 +2,12 @@
 
 Multi-format data toolkit for XML, JSON, and Markdown, now with Electron desktop packaging (`.dmg` / `.exe`) and optional `.NET 10` backend proxy.
 
+## Interface
+
+Claude Code-inspired warm dark chrome applied to the full tool shell, with the Formatter view as the primary workspace.
+
+![DataToolkit Claude Code theme](docs/images/readme-formatter-claude-code.png)
+
 ## Features
 
 - Format / Minify / Sort / Diff / Convert / Visualize

@@ -79,7 +79,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   return (
     <div className={`relative flex ${className}`} style={{ minHeight, maxHeight }}>
       {showLineNumbers && (
-        <div className="flex-shrink-0 w-10 bg-slate-900/50 border-r border-slate-700 text-right pr-2 py-4 select-none overflow-hidden">
+        <div className="flex-shrink-0 w-10 bg-gutter border-r border-slate-700 text-right pr-2 py-4 select-none overflow-hidden">
           {Array.from({ length: lineCount }, (_, i) => (
             <div key={i} className="text-[10px] text-slate-600 leading-5">
               {i + 1}
@@ -95,7 +95,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         readOnly={readOnly}
         placeholder={placeholder}
         className={`
-          flex-1 w-full bg-transparent p-4 font-mono text-sm resize-none focus:outline-none
+          flex-1 w-full bg-transparent p-4 font-mono text-sm resize-none focus:outline-none selection:bg-primary/20
           ${getTextColor()}
           ${readOnly ? 'cursor-default' : ''}
         `}

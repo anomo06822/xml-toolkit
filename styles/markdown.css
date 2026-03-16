@@ -1,13 +1,15 @@
 .markdown-preview {
   padding: 1.25rem;
-  border: 1px solid #1f2937;
+  border: 1px solid var(--dt-border);
   border-radius: 0.75rem;
-  background: #0d1117;
+  background: rgba(33, 27, 23, 0.94);
   box-sizing: border-box;
+  box-shadow: var(--dt-shadow-panel);
 }
 
 .markdown-preview.markdown-body {
-  background: #0d1117;
+  background: rgba(33, 27, 23, 0.94);
+  color: var(--dt-text);
 }
 
 .markdown-preview > :first-child {
@@ -23,5 +25,5 @@
 }
 
 .markdown-preview pre {
-  background: #0b1220;
+  background: var(--dt-editor);
 }

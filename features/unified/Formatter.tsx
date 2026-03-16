@@ -237,13 +237,13 @@ export const UnifiedFormatter: React.FC = () => {
               <div className="flex gap-1">
                 <button
                   onClick={handleDownload}
-                  className="text-xs text-primary hover:text-blue-400 flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10"
+                  className="text-xs text-primary hover:text-accent flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10"
                 >
                   <Download size={12} /> Download
                 </button>
                 <button
                   onClick={handleCopy}
-                  className="text-xs text-primary hover:text-blue-400 flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10"
+                  className="text-xs text-primary hover:text-accent flex items-center gap-1 px-2 py-1 rounded hover:bg-primary/10"
                 >
                   {copied ? <Check size={12} /> : <Copy size={12} />}
                   {copied ? 'Copied!' : 'Copy'}
@@ -251,7 +251,7 @@ export const UnifiedFormatter: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="flex-1 bg-[#162032] border border-slate-700 rounded-lg overflow-hidden">
+          <div className="flex-1 bg-editor border border-slate-700 rounded-lg overflow-hidden">
             <CodeEditor
               value={output}
               format={detectedFormat.format}

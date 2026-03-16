@@ -403,9 +403,7 @@ ${textSection}`;
       <section className="bg-surface border border-slate-700 rounded-xl p-4 flex flex-col min-h-[72vh]">
         <div className="flex justify-between items-center mb-3">
           <div>
-            <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-              Gemini Data Expert
-            </h2>
+            <h2 className="text-2xl font-bold tracking-tight text-slate-100">Gemini Data Expert</h2>
             <p className="text-slate-400 text-sm">Wider chat viewport for longer conversations</p>
           </div>
           {messages.length > 0 && (
@@ -451,7 +449,7 @@ ${textSection}`;
                     max-w-[86%] rounded-lg p-4 relative group
                     ${message.role === 'user'
                       ? 'bg-primary/20 border border-primary/30 text-slate-200'
-                      : 'bg-slate-900/50 border border-slate-700/50 text-slate-200'
+                      : 'bg-slate-900/60 border border-slate-700/60 text-slate-200'
                     }
                   `}
                 >
@@ -470,8 +468,8 @@ ${textSection}`;
 
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-slate-900/50 border border-slate-700/50 rounded-lg p-4">
-                <Loader2 className="animate-spin text-purple-400" size={20} />
+              <div className="bg-slate-900/60 border border-slate-700/60 rounded-lg p-4">
+                <Loader2 className="animate-spin text-primary" size={20} />
               </div>
             </div>
           )}
@@ -483,13 +481,13 @@ ${textSection}`;
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Describe what you need... (Shift+Enter for new line)"
-            className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg p-3 text-sm text-slate-200 focus:ring-2 focus:ring-purple-500 outline-none resize-none h-24"
+            className="flex-1 bg-editor border border-slate-600 rounded-lg p-3 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none resize-none h-24"
             disabled={loading}
           />
           <Button
             onClick={handleAskGemini}
             disabled={loading || !input.trim()}
-            className="h-auto bg-gradient-to-br from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 border-none px-6"
+            className="h-auto border-none px-6"
           >
             {loading ? <Loader2 className="animate-spin" /> : <MessageSquare />}
           </Button>
@@ -503,7 +501,7 @@ ${textSection}`;
           <textarea
             value={systemPrompt}
             onChange={(e) => savePrompts(e.target.value, customPrompt)}
-            className="w-full h-36 bg-[#0f172a] border border-slate-700 rounded-lg p-2 text-xs text-slate-200 outline-none"
+            className="w-full h-36 bg-editor border border-slate-700 rounded-lg p-2 text-xs text-slate-200 outline-none"
           />
         </div>
         <div>
@@ -512,7 +510,7 @@ ${textSection}`;
             value={customPrompt}
             onChange={(e) => savePrompts(systemPrompt, e.target.value)}
             placeholder="Extra rules for this workspace."
-            className="w-full h-24 bg-[#0f172a] border border-slate-700 rounded-lg p-2 text-xs text-slate-200 outline-none"
+            className="w-full h-24 bg-editor border border-slate-700 rounded-lg p-2 text-xs text-slate-200 outline-none"
           />
         </div>
 
@@ -522,7 +520,7 @@ ${textSection}`;
             value={presetName}
             onChange={(e) => setPresetName(e.target.value)}
             placeholder="Preset name"
-            className="w-full bg-[#0f172a] border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none"
+            className="w-full bg-editor border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none"
           />
           <div className="flex gap-2">
             <button
