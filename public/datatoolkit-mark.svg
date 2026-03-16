@@ -1,0 +1,40 @@
+<svg width="256" height="256" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="dt-shell" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3A2A20" />
+      <stop offset="0.5" stop-color="#2A1F19" />
+      <stop offset="1" stop-color="#17110E" />
+    </linearGradient>
+    <linearGradient id="dt-rim" x1="11" y1="10" x2="53" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E39A63" stop-opacity="0.85" />
+      <stop offset="1" stop-color="#6F4A34" stop-opacity="0.35" />
+    </linearGradient>
+    <linearGradient id="dt-paper" x1="21" y1="17" x2="42" y2="47" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF3E6" stop-opacity="0.97" />
+      <stop offset="1" stop-color="#D8CABD" stop-opacity="0.86" />
+    </linearGradient>
+    <filter id="dt-shadow" x="0" y="0" width="64" height="64" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <g filter="url(#dt-shadow)">
+    <rect x="4" y="4" width="56" height="56" rx="18" fill="url(#dt-shell)" />
+    <rect x="4.75" y="4.75" width="54.5" height="54.5" rx="17.25" stroke="url(#dt-rim)" stroke-width="1.5" />
+
+    <path
+      d="M21.5 16.5H35L42.5 24V42.5C42.5 45.2614 40.2614 47.5 37.5 47.5H21.5C18.7386 47.5 16.5 45.2614 16.5 42.5V21.5C16.5 18.7386 18.7386 16.5 21.5 16.5Z"
+      fill="#17120F"
+      stroke="url(#dt-paper)"
+      stroke-width="2.4"
+      stroke-linejoin="round"
+    />
+    <path d="M35 16.5V24H42.5" stroke="url(#dt-paper)" stroke-width="2.4" stroke-linejoin="round" />
+
+    <rect x="22.75" y="30.5" width="5" height="11.5" rx="1.6" fill="#E39A63" />
+    <rect x="29.5" y="26.5" width="5" height="15.5" rx="1.6" fill="#B9BE96" />
+    <rect x="36.25" y="33.25" width="3.5" height="8.75" rx="1.4" fill="#D7C8BA" />
+
+    <path d="M21.75 44.75H37.25" stroke="#6B4E3A" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+  </g>
+</svg>

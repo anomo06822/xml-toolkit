@@ -3,7 +3,7 @@ import { AppTab } from '../core';
 import { AppSettings, clearAllData, GEMINI_MODEL_OPTIONS, getSettings, updateSettings } from '../services';
 import { 
   AlignLeft, ArrowDownAZ, GitCompare, ArrowLeftRight, 
-  Network, Sparkles, FileCode, FileText, Trash2, Settings, Table2, ScrollText
+  Network, Sparkles, FileText, Trash2, Settings, Table2, ScrollText
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -92,9 +92,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     <div className="w-64 bg-surface/95 border-r border-slate-700/80 backdrop-blur-xl flex flex-col">
       {/* Logo */}
       <div className="p-6 flex items-center gap-3 border-b border-slate-700">
-        <div className="w-10 h-10 bg-gradient-to-br from-[#8e6547] via-primary to-[#5e4535] rounded-xl flex items-center justify-center text-white shadow-[0_18px_40px_rgba(200,123,72,0.18)]">
-          <FileCode size={22} />
-        </div>
+        <img
+          src="/datatoolkit-mark.svg"
+          alt="DataToolkit"
+          className="h-10 w-10 rounded-xl shadow-[0_18px_40px_rgba(200,123,72,0.18)]"
+        />
         <div>
           <h1 className="font-bold text-slate-100 text-lg tracking-tight">DataToolkit</h1>
           <p className="text-[10px] text-slate-500">XML • JSON • Markdown</p>
