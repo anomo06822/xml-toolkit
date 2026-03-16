@@ -22,6 +22,29 @@ const SAMPLE_DIFF_RIGHT = `{
 }`;
 const LOG_PREVIEW_LIMIT = 240;
 
+const getDiffLineClasses = (type: DiffResultType['lines'][number]['type']) => {
+  switch (type) {
+    case 'added':
+      return {
+        row: 'bg-[var(--dt-diff-added-bg)] text-[var(--dt-diff-added-text)] border-y border-[var(--dt-diff-added-border)]',
+        gutter: 'bg-green-500/14 text-green-200 border-r border-[var(--dt-diff-added-border)]',
+        sign: 'text-green-200'
+      };
+    case 'removed':
+      return {
+        row: 'bg-[var(--dt-diff-removed-bg)] text-[var(--dt-diff-removed-text)] border-y border-[var(--dt-diff-removed-border)]',
+        gutter: 'bg-red-500/14 text-red-200 border-r border-[var(--dt-diff-removed-border)]',
+        sign: 'text-red-200'
+      };
+    default:
+      return {
+        row: 'bg-[var(--dt-diff-neutral-bg)] text-slate-400 border-y border-transparent',
+        gutter: 'text-slate-600 border-r border-slate-800/80',
+        sign: 'text-slate-700'
+      };
+  }
+};
+
 // Format badge component
 const FormatBadge: React.FC<{ format: DataFormat; confidence: number }> = ({ format, confidence }) => {
   const icons: Record<DataFormat, React.ReactNode> = {
@@ -348,11 +371,11 @@ Please provide a clear, technical summary of the changes:`;
           <div className="flex justify-between items-center">
             <label className="text-sm font-medium text-slate-400">Diff Result</label>
             {diffResult && (
-              <div className="flex items-center gap-4">
-                <div className="flex gap-3 text-xs">
-                  <span className="text-green-400">+{diffResult.stats.added} added</span>
-                  <span className="text-red-400">-{diffResult.stats.removed} removed</span>
-                  <span className="text-slate-500">{diffResult.stats.unchanged} unchanged</span>
+              <div className="flex items-center gap-3 flex-wrap justify-end">
+                <div className="flex gap-2 text-xs flex-wrap">
+                  <span className="diff-legend-chip diff-legend-chip-added text-green-200">+{diffResult.stats.added} added</span>
+                  <span className="diff-legend-chip diff-legend-chip-removed text-red-200">-{diffResult.stats.removed} removed</span>
+                  <span className="diff-legend-chip diff-legend-chip-neutral text-slate-400">{diffResult.stats.unchanged} unchanged</span>
                 </div>
                 <button
                   onClick={handleCopyDiff}
@@ -383,33 +406,45 @@ Please provide a clear, technical summary of the changes:`;
             </div>
           )}
           
-          <div className="flex-1 bg-editor border border-slate-700 rounded-lg overflow-auto p-4 font-mono text-sm">
+          <div className="flex-1 bg-editor border border-slate-700 rounded-lg overflow-auto font-mono text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
             {!diffResult ? (
-              <div className="text-slate-500 text-center mt-20">
+              <div className="text-slate-500 text-center mt-20 px-4">
                 Click Compare to see differences
               </div>
             ) : diffResult.lines.length === 0 ? (
-              <div className="text-green-400 text-center mt-20">
+              <div className="text-green-300 text-center mt-20 px-4">
                 ✓ No differences found
               </div>
             ) : (
-              diffResult.lines.map((line, idx) => (
-                <div
-                  key={idx}
-                  className={`
-                    px-2 whitespace-pre-wrap border-l-2
-                    ${line.type === 'added' ? 'bg-green-900/20 border-green-500 text-green-200' : ''}
-                    ${line.type === 'removed' ? 'bg-red-900/20 border-red-500 text-red-200' : ''}
-                    ${line.type === 'unchanged' ? 'border-transparent text-slate-400' : ''}
-                  `}
-                >
-                  <span className="inline-block w-6 select-none opacity-50">{idx + 1}</span>
-                  {line.type === 'removed' && '- '}
-                  {line.type === 'added' && '+ '}
-                  {line.type === 'unchanged' && '  '}
-                  {line.content}
-                </div>
-              ))
+              <div className="min-w-full">
+                {diffResult.lines.map((line, idx) => {
+                  const tone = getDiffLineClasses(line.type);
+                  const sign = line.type === 'removed' ? '-' : line.type === 'added' ? '+' : ' ';
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`
+                        grid grid-cols-[2.75rem_1fr] items-start
+                        ${tone.row}
+                      `}
+                    >
+                      <div
+                        className={`
+                          sticky left-0 z-[1] grid grid-cols-[1rem_1fr] items-start gap-2 px-3 py-2 text-[11px]
+                          ${tone.gutter}
+                        `}
+                      >
+                        <span className={`font-semibold ${tone.sign}`}>{sign}</span>
+                        <span className="tabular-nums opacity-80">{idx + 1}</span>
+                      </div>
+                      <div className="px-4 py-2 whitespace-pre-wrap break-words leading-6">
+                        {line.content || ' '}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>

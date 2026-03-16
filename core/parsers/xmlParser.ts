@@ -4,11 +4,18 @@
 
 import { TreeNode, OperationResult, FormatOptions, SortOptions } from '../types';
 
+const normalizeXmlInput = (xmlStr: string): string => xmlStr.trim();
+
 // Parse XML string to DOM Document
 export const parseXml = (xmlStr: string): OperationResult<Document> => {
   try {
+    const normalized = normalizeXmlInput(xmlStr);
+    if (!normalized) {
+      return { success: false, error: 'Empty XML content' };
+    }
+
     const parser = new DOMParser();
-    const doc = parser.parseFromString(xmlStr, 'text/xml');
+    const doc = parser.parseFromString(normalized, 'text/xml');
     const parserError = doc.getElementsByTagName('parsererror');
     
     if (parserError.length > 0) {
@@ -110,8 +117,13 @@ export const formatXml = (xml: string, options: Partial<FormatOptions> = {}): Op
 // Minify XML (remove whitespace)
 export const minifyXml = (xmlStr: string): OperationResult<string> => {
   try {
+    const normalized = normalizeXmlInput(xmlStr);
+    if (!normalized) {
+      return { success: false, error: 'Empty XML content' };
+    }
+
     // Pre-process: replace escaped characters
-    const cleaned = xmlStr
+    const cleaned = normalized
       .replace(/\\n/g, '\n')
       .replace(/\\r/g, '')
       .replace(/\\"/g, '"');

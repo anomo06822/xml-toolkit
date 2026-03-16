@@ -12,6 +12,11 @@ const HISTORY_KEY = `${STORAGE_PREFIX}history`;
 const GEMINI_API_LOGS_KEY = `${STORAGE_PREFIX}gemini_api_logs`;
 const AI_CONTEXT_KEY = `${STORAGE_PREFIX}ai_context`;
 const GEMINI_UPLOAD_HISTORY_KEY = `${STORAGE_PREFIX}gemini_upload_history`;
+const DEPRECATED_STORAGE_KEYS = [
+  `${STORAGE_PREFIX}translate_auto_enabled`,
+  `${STORAGE_PREFIX}translate_optimize_prompt`,
+  `${STORAGE_PREFIX}translate_history`
+];
 const AI_SENSITIVE_EXPORT_KEYS = new Set([
   GEMINI_API_LOGS_KEY,
   AI_CONTEXT_KEY,
@@ -23,6 +28,12 @@ const AI_SENSITIVE_EXPORT_KEYS = new Set([
   `${STORAGE_PREFIX}gemini_custom_prompt`,
   `${STORAGE_PREFIX}gemini_prompt_presets`
 ]);
+
+const purgeDeprecatedStorageKeys = () => {
+  DEPRECATED_STORAGE_KEYS.forEach((key) => {
+    localStorage.removeItem(key);
+  });
+};
 
 // ============================================
 // Templates Management
@@ -225,6 +236,7 @@ const pruneAiSensitiveLocalData = (settings: AppSettings) => {
 
 export const getSettings = (): AppSettings => {
   try {
+    purgeDeprecatedStorageKeys();
     const data = localStorage.getItem(SETTINGS_KEY);
     if (!data) {
       return defaultSettings;

@@ -30,6 +30,14 @@
   --dt-error-soft: rgba(201, 122, 104, 0.16);
   --dt-warning: #c8a26a;
   --dt-warning-soft: rgba(200, 162, 106, 0.16);
+  --dt-diff-added-bg: rgba(144, 166, 122, 0.2);
+  --dt-diff-added-border: rgba(144, 166, 122, 0.44);
+  --dt-diff-added-text: #edf4e6;
+  --dt-diff-removed-bg: rgba(201, 122, 104, 0.2);
+  --dt-diff-removed-border: rgba(201, 122, 104, 0.44);
+  --dt-diff-removed-text: #f6e5df;
+  --dt-diff-neutral-bg: rgba(255, 255, 255, 0.025);
+  --dt-diff-neutral-border: rgba(255, 255, 255, 0.05);
   --dt-shadow-panel: 0 28px 60px rgba(0, 0, 0, 0.26);
   --dt-shadow-accent: 0 14px 36px rgba(200, 123, 72, 0.18);
   --dt-shell-gradient:
@@ -123,4 +131,40 @@ textarea::placeholder {
 
 .panel-elevated {
   box-shadow: var(--dt-shadow-panel);
+}
+
+.diff-legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  border: 1px solid var(--dt-diff-neutral-border);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.diff-legend-chip::before {
+  content: '';
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+}
+
+.diff-legend-chip-added::before {
+  background: var(--dt-diff-added-bg);
+  border-color: var(--dt-diff-added-border);
+}
+
+.diff-legend-chip-removed::before {
+  background: var(--dt-diff-removed-bg);
+  border-color: var(--dt-diff-removed-border);
+}
+
+.diff-legend-chip-neutral::before {
+  background: var(--dt-diff-neutral-bg);
+  border-color: var(--dt-diff-neutral-border);
 }
